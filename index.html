@@ -549,8 +549,34 @@
             
             <div id="tab-content-saida" class="tab-content">
                 <h2 class="text-xl font-bold text-gray-800 mb-4">📤 Registrar Saída de Veículo</h2>
-                <div><label for="saida-pesquisa-placa" class="text-sm font-medium text-gray-700">🔍 Pesquisar Placa</label><input type="search" id="saida-pesquisa-placa" class="mt-1 w-full p-2 border border-gray-300 rounded-md" placeholder="Digite a placa para encontrar..."></div>
-                <div id="lista-pendentes" class="mt-4 space-y-2"></div>
+                
+                <div class="bg-gray-50 p-4 rounded-xl border border-gray-200 mb-6">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+                        <div class="sm:col-span-2 lg:col-span-1">
+                            <label for="saida-pesquisa-placa" class="text-sm font-medium text-gray-700">🔍 Pesquisar Placa</label>
+                            <input type="search" id="saida-pesquisa-placa" class="mt-1 w-full p-2 border border-gray-300 rounded-md" placeholder="Digite a placa...">
+                        </div>
+                        <div>
+                            <label for="saida-filtro-data" class="text-sm font-medium text-gray-700">📅 Data Entrada</label>
+                            <input type="date" id="saida-filtro-data" class="mt-1 w-full p-2 border border-gray-300 rounded-md">
+                        </div>
+                        <div>
+                            <label for="saida-filtro-fornecedor" class="text-sm font-medium text-gray-700">🏢 Fornecedor</label>
+                            <select id="saida-filtro-fornecedor" class="mt-1 w-full p-2 border border-gray-300 rounded-md"></select>
+                        </div>
+                        <div>
+                            <label for="saida-filtro-produto" class="text-sm font-medium text-gray-700">📦 Produto</label>
+                            <select id="saida-filtro-produto" class="mt-1 w-full p-2 border border-gray-300 rounded-md"></select>
+                        </div>
+                        <div class="lg:col-start-4 flex justify-end">
+                            <button id="btn-limpar-filtros-saida" class="text-sm text-accent hover:underline font-semibold flex items-center gap-1">
+                                🔄 Limpar Filtros
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="lista-pendentes" class="space-y-2"></div>
                 <div id="form-saida-container" class="mt-6 border-t border-gray-200 pt-6 hidden">
                     <form id="form-saida" class="space-y-4"></form>
                 </div>

@@ -808,7 +808,12 @@
                     programacaoSugestoesLista: get('entrada-programacao-sugestoes-lista'),
                     programacaoSugestoesTitulo: get('entrada-programacao-sugestoes-titulo'),
                     btnProgramacaoSugestoesRefresh: get('btn-programacao-sugestoes-refresh'),
-                    saidaPesquisaPlaca: get('saida-pesquisa-placa'), listaPendentes: get('lista-pendentes'),
+                    saidaPesquisaPlaca: get('saida-pesquisa-placa'), 
+                    saidaFiltroData: get('saida-filtro-data'),
+                    saidaFiltroFornecedor: get('saida-filtro-fornecedor'),
+                    saidaFiltroProduto: get('saida-filtro-produto'),
+                    btnLimparFiltrosSaida: get('btn-limpar-filtros-saida'),
+                    listaPendentes: get('lista-pendentes'),
                     visualizadorPesquisaPlaca: get('visualizador-pesquisa-placa'), visualizadorOrdenacao: get('visualizador-ordenacao'), visualizadorListaPendentes: get('visualizador-lista-pendentes'), visualizadorResumoTotal: get('visualizador-resumo-total'),
                     formSaidaContainer: get('form-saida-container'), formSaida: get('form-saida'),
                     tabelaTickets: get('tabela-tickets'),
@@ -982,7 +987,11 @@
                         if (!isChecked) { this.dom.entrada.nf2.value = ''; }
                     }
                 });
-                this.dom.saidaPesquisaPlaca?.addEventListener('input', () => this.renderPendentes());
+                [this.dom.saidaPesquisaPlaca, this.dom.saidaFiltroData, this.dom.saidaFiltroFornecedor, this.dom.saidaFiltroProduto].forEach(el => {
+                    el?.addEventListener('input', () => this.renderPendentes());
+                });
+                this.dom.btnLimparFiltrosSaida?.addEventListener('click', () => this.limparFiltrosSaida());
+                
                 this.dom.visualizadorPesquisaPlaca?.addEventListener('input', () => this.renderPendentes());
                 this.dom.visualizadorOrdenacao?.addEventListener('change', () => this.renderPendentes());
                 this.dom.listaPendentes?.addEventListener('click', (e) => this.handlePendenteSelect(e));
@@ -4204,6 +4213,10 @@
                 populateSelect(this.dom.dbFiltroFornecedor, fornecedores.map(name => ({ name })), 'name', 'name', 'Todos Fornecedores');
                 populateSelect(this.dom.dbFiltroProduto, produtos, 'nome', 'nome', 'Todos Produtos');
                 populateSelect(this.dom.dbFiltroTransportadora, transportadoras.map(name => ({ name })), 'name', 'name', 'Todas Transportadoras');
+                
+                // Filtros da aba Saída
+                populateSelect(this.dom.saidaFiltroFornecedor, fornecedores.map(name => ({ name })), 'name', 'name');
+                populateSelect(this.dom.saidaFiltroProduto, produtos, 'nome', 'nome');
             },
 
             renderFornecedores() {
@@ -4485,14 +4498,55 @@
                     });
                 }, 100);
             },
+            limparFiltrosSaida() {
+                if (this.dom.saidaPesquisaPlaca) this.dom.saidaPesquisaPlaca.value = '';
+                if (this.dom.saidaFiltroData) this.dom.saidaFiltroData.value = '';
+                if (this.dom.saidaFiltroFornecedor) this.dom.saidaFiltroFornecedor.value = '';
+                if (this.dom.saidaFiltroProduto) this.dom.saidaFiltroProduto.value = '';
+                this.renderPendentes();
+            },
+
             renderPendentes() {
                 const pendentes = Array.isArray(this.state.pesagensPendentes) ? this.state.pesagensPendentes : [];
                 const termoSaida = (this.dom.saidaPesquisaPlaca?.value || '').trim().toLowerCase();
 
                 if (this.dom.listaPendentes) {
-                    const pendentesSaida = termoSaida === ''
-                        ? pendentes
-                        : pendentes.filter(p => (p.placa || '').toLowerCase().includes(termoSaida));
+                    const filtroData = this.dom.saidaFiltroData?.value;
+                    const filtroFornecedor = this.dom.saidaFiltroFornecedor?.value;
+                    const filtroProduto = this.dom.saidaFiltroProduto?.value;
+
+                    const pendentesSaida = pendentes.filter(p => {
+                        const matchPlaca = (p.placa || '').toLowerCase().includes(termoSaida);
+                        
+                        let matchData = true;
+                        if (filtroData) {
+                            const dateObj = p.dataEntrada ? (p.dataEntrada.seconds ? new Date(p.dataEntrada.seconds * 1000) : new Date(p.dataEntrada)) : null;
+                            if (dateObj) {
+                                // Ajustar para o fuso horário local para comparação de data YYYY-MM-DD
+                                const year = dateObj.getFullYear();
+                                const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+                                const day = String(dateObj.getDate()).padStart(2, '0');
+                                const formattedObj = `${year}-${month}-${day}`;
+                                matchData = formattedObj === filtroData;
+                            } else {
+                                matchData = false;
+                            }
+                        }
+
+                        let matchFornecedor = true;
+                        if (filtroFornecedor) {
+                            const fornecedorNome = typeof p.cliente === 'string' ? p.cliente : (p.cliente?.nome || '');
+                            matchFornecedor = fornecedorNome === filtroFornecedor;
+                        }
+
+                        let matchProduto = true;
+                        if (filtroProduto) {
+                            const produtoNome = typeof p.produto === 'string' ? p.produto : (p.produto?.nome || '');
+                            matchProduto = produtoNome === filtroProduto;
+                        }
+
+                        return matchPlaca && matchData && matchFornecedor && matchProduto;
+                    });
 
                     this.dom.listaPendentes.innerHTML = pendentesSaida.length > 0 ? pendentesSaida.map(p => {
                         const produto = typeof p.produto === 'string' ? p.produto : (p.produto?.nome || 'N/A');
