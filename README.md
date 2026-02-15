@@ -28,9 +28,7 @@ Sistema de Pesagem Rodoviária completo e responsivo (PWA).
 
 Clique abaixo para acessar a versão online:
 
-[![Vercel](https://img.shields.io/badge/vercel-%23000000.svg?style=for-the-badge&logo=vercel&logoColor=white)](YOUR_VERCEL_URL_HERE)
-
-> **Nota:** Substitua `YOUR_VERCEL_URL_HERE` pelo link real do seu projeto na Vercel após o deploy.
+[![Vercel Demo](https://img.shields.io/badge/vercel-%23000000.svg?style=for-the-badge&logo=vercel&logoColor=white)](https://balanca-pro-plus.vercel.app)
 
 ## Deploy no Netlify
 
