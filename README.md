@@ -24,6 +24,14 @@ Sistema de Pesagem Rodoviária completo e responsivo (PWA).
 
 3. Acesse `http://localhost:3000` (ou a porta indicada).
 
+## 🚀 Link do Projeto (Vercel)
+
+Clique abaixo para acessar a versão online:
+
+[![Vercel](https://img.shields.io/badge/vercel-%23000000.svg?style=for-the-badge&logo=vercel&logoColor=white)](YOUR_VERCEL_URL_HERE)
+
+> **Nota:** Substitua `YOUR_VERCEL_URL_HERE` pelo link real do seu projeto na Vercel após o deploy.
+
 ## Deploy no Netlify
 
 1. Crie um repositório no GitHub e faça o push deste código.
