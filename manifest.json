@@ -1,0 +1,43 @@
+{
+  "name": "Balança Rodoviária Pro+",
+  "short_name": "Balança Pro+",
+  "description": "Sistema completo de gestão de pesagem rodoviária",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#0d9488",
+  "theme_color": "#0d9488",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "icon-192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["business", "productivity"],
+  "lang": "pt-BR",
+  "dir": "ltr",
+  "shortcuts": [
+    {
+      "name": "Nova Entrada",
+      "short_name": "Entrada",
+      "description": "Registrar nova entrada de veículo",
+      "url": "/index.html#entrada",
+      "icons": [{ "src": "icon-192.svg", "sizes": "192x192", "type": "image/svg+xml" }]
+    },
+    {
+      "name": "Relatórios",
+      "short_name": "Relatórios",
+      "description": "Ver relatórios de pesagens",
+      "url": "/index.html#relatorios",
+      "icons": [{ "src": "icon-192.svg", "sizes": "192x192", "type": "image/svg+xml" }]
+    }
+  ]
+}

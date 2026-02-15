@@ -1,0 +1,38 @@
+/*
+  # Segurança: Prevenir clickjacking
+  X-Frame-Options: DENY
+  
+  # Segurança: Prevenir MIME type sniffing
+  X-Content-Type-Options: nosniff
+  
+  # Segurança: Proteção XSS
+  X-XSS-Protection: 1; mode=block
+  
+  # Segurança: Política de referrer
+  Referrer-Policy: strict-origin-when-cross-origin
+  
+  # Segurança: Content Security Policy (CORRIGIDO - inclui todos os CDNs + Tailwind no connect-src)
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.gstatic.com https://cdn.jsdelivr.net https://cdn.tailwindcss.com https://cdn.emailjs.com https://cdnjs.cloudflare.com https://cdn.sheetjs.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://cdn.tailwindcss.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://*.firebaseio.com https://*.googleapis.com https://*.cloudfunctions.net https://api.emailjs.com https://www.gstatic.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://cdn.sheetjs.com https://cdn.tailwindcss.com wss://*.firebaseio.com; frame-src 'none';
+  
+  # Segurança: Permissions Policy
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()
+  
+  # Cache para assets
+  Cache-Control: public, max-age=0, must-revalidate
+
+/service-worker.js
+  Cache-Control: no-cache, no-store, must-revalidate
+
+/manifest.json
+  Content-Type: application/manifest+json
+  Cache-Control: public, max-age=3600
+
+/*.svg
+  Content-Type: image/svg+xml
+  Cache-Control: public, max-age=31536000, immutable
+
+/*.js
+  Cache-Control: public, max-age=31536000, immutable
+
+/*.css
+  Cache-Control: public, max-age=31536000, immutable

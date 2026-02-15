@@ -1,0 +1,133 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Função helper para verificar autenticação
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    // Função helper para obter role do usuário
+    function getUserRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+    
+    // Função helper para verificar se é dono
+    function isDono() {
+      return isSignedIn() && getUserRole() == 'dono';
+    }
+    
+    // Função helper para verificar se é operador ou dono
+    function isOperadorOrDono() {
+      return isSignedIn() && (getUserRole() == 'operador' || getUserRole() == 'dono');
+    }
+    
+    // ==================== USUÁRIOS ====================
+    match /users/{userId} {
+      // Leitura: apenas o próprio usuário ou donos
+      allow read: if isSignedIn() && (request.auth.uid == userId || isDono());
+      
+      // Criação: apenas durante registro (primeira vez)
+      allow create: if isSignedIn() && request.auth.uid == userId;
+      
+      // Atualização: apenas donos podem alterar roles
+      allow update: if isSignedIn() && (
+        (request.auth.uid == userId && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role'])) ||
+        isDono()
+      );
+      
+      // Exclusão: apenas donos
+      allow delete: if isDono();
+    }
+    
+    // ==================== CONFIGURAÇÕES ====================
+    match /app_state/config {
+      // Leitura: todos autenticados
+      allow read: if isSignedIn();
+      
+      // Escrita: apenas donos e operadores
+      allow write: if isOperadorOrDono();
+    }
+    
+    // ==================== CADASTROS ====================
+    match /app_state/cadastros {
+      // Leitura: todos autenticados
+      allow read: if isSignedIn();
+      
+      // Escrita: apenas donos e operadores
+      allow write: if isOperadorOrDono();
+    }
+    
+    // ==================== PESAGENS PENDENTES ====================
+    match /pesagensPendentes/{pesagemId} {
+      // Leitura: todos autenticados
+      allow read: if isSignedIn();
+      
+      // Criação: apenas donos e operadores
+      allow create: if isOperadorOrDono();
+      
+      // Atualização: apenas donos e operadores
+      allow update: if isOperadorOrDono();
+      
+      // Exclusão: apenas donos e operadores
+      allow delete: if isOperadorOrDono();
+    }
+    
+    // ==================== PESAGENS COMPLETAS ====================
+    match /pesagensCompletas/{pesagemId} {
+      // Leitura: todos autenticados
+      allow read: if isSignedIn();
+      
+      // Criação: apenas donos e operadores
+      allow create: if isOperadorOrDono();
+      
+      // Atualização: apenas donos e operadores (para correções)
+      allow update: if isOperadorOrDono();
+      
+      // Exclusão: apenas donos
+      allow delete: if isDono();
+    }
+    
+    // ==================== PESAGENS ARQUIVADAS ====================
+    match /pesagensArquivadas/{pesagemId} {
+      // Leitura: todos autenticados
+      allow read: if isSignedIn();
+      
+      // Criação: apenas donos e operadores (via arquivamento)
+      allow create: if isOperadorOrDono();
+      
+      // Atualização: não permitido (dados históricos)
+      allow update: if false;
+      
+      // Exclusão: apenas donos
+      allow delete: if isDono();
+    }
+    
+    // ==================== LOGS ====================
+    match /logs/{logId} {
+      // Leitura: apenas donos
+      allow read: if isDono();
+      
+      // Criação: todos autenticados podem criar logs
+      allow create: if isSignedIn();
+      
+      // Atualização/Exclusão: não permitido (logs são imutáveis)
+      allow update, delete: if false;
+    }
+    
+    // ==================== PROGRAMAÇÃO DO DIA ====================
+    match /programacaoDia/{programacaoId} {
+      // Leitura: todos autenticados
+      allow read: if isSignedIn();
+      
+      // Escrita: apenas donos e operadores
+      allow write: if isOperadorOrDono();
+    }
+    
+    // ==================== BLOQUEIO GERAL ====================
+    // Negar acesso a qualquer outra collection não especificada
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
