@@ -1207,3 +1207,247 @@
             border-color: #34495e;
             box-shadow: 0 2px 8px rgba(52, 73, 94, 0.5);
         }
+        /* ================================================================
+           MODERNIZAÇÃO VISUAL 2026
+           ================================================================ */
+
+        /* ===== 1. SISTEMA DE TOASTS ===== */
+        #toast-container {
+            position: fixed;
+            top: 1.25rem;
+            right: 1.25rem;
+            z-index: 99999;
+            display: flex;
+            flex-direction: column;
+            gap: 0.625rem;
+            pointer-events: none;
+            width: 360px;
+            max-width: calc(100vw - 2.5rem);
+        }
+
+        .toast {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+            padding: 0.875rem 1rem;
+            border-radius: 0.875rem;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.1);
+            pointer-events: all;
+            animation: toastSlideIn 0.45s cubic-bezier(0.34,1.56,0.64,1) forwards;
+            border: 1px solid rgba(255,255,255,0.25);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .toast.removing {
+            animation: toastSlideOut 0.3s ease forwards;
+        }
+
+        .toast::after {
+            content: '';
+            position: absolute;
+            bottom: 0; left: 0;
+            height: 3px;
+            background: rgba(255,255,255,0.45);
+            border-radius: 0 0 0 0.875rem;
+            animation: toastTimer var(--toast-duration, 4s) linear forwards;
+        }
+
+        .toast-success { background: rgba(5,150,105,0.97); color: white; }
+        .toast-error   { background: rgba(220,38,38,0.97);  color: white; }
+        .toast-warning { background: rgba(217,119,6,0.97);  color: white; }
+        .toast-info    { background: rgba(37,99,235,0.97);  color: white; }
+
+        .toast-icon { font-size: 1.35rem; flex-shrink: 0; line-height: 1; margin-top: 0.1rem; }
+        .toast-body { flex: 1; min-width: 0; }
+        .toast-title { font-weight: 700; font-size: 0.875rem; line-height: 1.3; }
+        .toast-message { font-size: 0.8125rem; opacity: 0.88; margin-top: 3px; line-height: 1.45; }
+
+        .toast-close {
+            background: none; border: none; color: inherit; opacity: 0.7;
+            cursor: pointer; padding: 0; font-size: 1rem; flex-shrink: 0;
+            transition: opacity 0.2s; border-radius: 50%; width: 22px; height: 22px;
+            display: flex; align-items: center; justify-content: center; margin-top: -1px;
+        }
+        .toast-close:hover { opacity: 1; background: rgba(255,255,255,0.2); transform: none; }
+
+        @keyframes toastSlideIn {
+            from { opacity: 0; transform: translateX(calc(100% + 1rem)) scale(0.92); }
+            to   { opacity: 1; transform: translateX(0) scale(1); }
+        }
+        @keyframes toastSlideOut {
+            to { opacity: 0; transform: translateX(calc(100% + 1rem)); max-height: 0; padding-top: 0; padding-bottom: 0; }
+        }
+        @keyframes toastTimer {
+            from { width: 100%; }
+            to   { width: 0%; }
+        }
+
+        /* ===== 2. LOGIN BACKGROUND ANIMADO ===== */
+        .auth-container {
+            overflow: hidden;
+        }
+
+        .auth-container::before,
+        .auth-container::after {
+            content: '';
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.1);
+            pointer-events: none;
+            z-index: 0;
+            animation: floatBubble 14s ease-in-out infinite alternate;
+        }
+
+        .auth-container::before {
+            width: 480px; height: 480px;
+            top: -160px; left: -140px;
+            animation-duration: 16s;
+        }
+
+        .auth-container::after {
+            width: 380px; height: 380px;
+            bottom: -130px; right: -110px;
+            animation-duration: 12s;
+            animation-delay: -6s;
+            background: rgba(255,255,255,0.07);
+        }
+
+        .auth-card {
+            position: relative;
+            z-index: 1;
+            box-shadow: 0 25px 80px rgba(0,0,0,0.35), 0 8px 24px rgba(0,0,0,0.2) !important;
+        }
+
+        @keyframes floatBubble {
+            0%   { transform: translate(0, 0) scale(1); }
+            50%  { transform: translate(25px, -30px) scale(1.06); }
+            100% { transform: translate(40px, 18px) scale(0.94); }
+        }
+
+        /* ===== 3. TABS MODERNAS (PILL STYLE) ===== */
+        nav[aria-label="Tabs"] {
+            background: var(--bg-tertiary) !important;
+            padding: 0.35rem !important;
+            border-radius: 0.875rem !important;
+            gap: 0.25rem !important;
+            border: 1px solid var(--border-color) !important;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.06) !important;
+            margin-bottom: 1.5rem;
+        }
+
+        .tab-button {
+            padding: 0.5rem 1rem !important;
+            border-bottom: none !important;
+            border: none !important;
+            border-radius: 0.625rem !important;
+            background: transparent !important;
+            color: var(--text-secondary) !important;
+            font-weight: 600 !important;
+            font-size: 0.8125rem;
+            white-space: nowrap;
+            transition: all 0.18s cubic-bezier(0.4,0,0.2,1) !important;
+        }
+
+        .tab-button:hover:not(.active) {
+            background: rgba(0,0,0,0.055) !important;
+            color: var(--text-primary) !important;
+            transform: none !important;
+        }
+
+        .tab-button.active {
+            background: white !important;
+            color: var(--color-accent) !important;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.12), 0 1px 3px rgba(0,0,0,0.08) !important;
+            border-color: transparent !important;
+            transform: none !important;
+        }
+
+        [data-theme="dark"] nav[aria-label="Tabs"] {
+            background: rgba(17,24,39,0.85) !important;
+            border-color: #374151 !important;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.3) !important;
+        }
+
+        [data-theme="dark"] .tab-button:hover:not(.active) {
+            background: rgba(255,255,255,0.06) !important;
+        }
+
+        [data-theme="dark"] .tab-button.active {
+            background: #374151 !important;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.4) !important;
+        }
+
+        /* ===== 4. SCROLLBAR CUSTOMIZADA ===== */
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb {
+            background: var(--color-accent);
+            border-radius: 3px;
+            opacity: 0.6;
+        }
+        ::-webkit-scrollbar-thumb:hover { filter: brightness(1.2); }
+        ::-webkit-scrollbar-corner { background: transparent; }
+
+        /* ===== 5. EFEITO RIPPLE NOS BOTÕES ===== */
+        .btn-primary, button[class*="bg-blue"], button[class*="bg-green"],
+        button[class*="bg-red"], button[class*="bg-teal"], button[class*="bg-purple"],
+        button[class*="bg-gray-7"], button[class*="bg-slate"] {
+            position: relative;
+            overflow: hidden;
+        }
+
+        .ripple-wave {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.3);
+            transform: scale(0);
+            animation: rippleAnim 0.55s linear;
+            pointer-events: none;
+        }
+
+        @keyframes rippleAnim {
+            to { transform: scale(5); opacity: 0; }
+        }
+
+        /* ===== 6. BACKGROUND TEXTURA SUTIL ===== */
+        body {
+            background-image: radial-gradient(circle, rgba(0,0,0,0.035) 1px, transparent 1px);
+            background-size: 28px 28px;
+        }
+
+        [data-theme="dark"] body {
+            background-image: radial-gradient(circle, rgba(255,255,255,0.025) 1px, transparent 1px) !important;
+            background-size: 28px 28px;
+        }
+
+        /* ===== 7. HEADER GLASSMORPHISM ===== */
+        #app-container > header {
+            background: rgba(255,255,255,0.78) !important;
+            backdrop-filter: blur(14px) !important;
+            -webkit-backdrop-filter: blur(14px) !important;
+            border-radius: 1rem !important;
+            padding: 1rem 1.25rem !important;
+            margin-bottom: 1.5rem !important;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.07) !important;
+            border: 1px solid rgba(255,255,255,0.65) !important;
+        }
+
+        [data-theme="dark"] #app-container > header {
+            background: rgba(31,41,55,0.78) !important;
+            border-color: rgba(75,85,99,0.45) !important;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.35) !important;
+        }
+
+        /* ===== 8. MODAIS MODERNIZADOS ===== */
+        .modal-content {
+            border-radius: 1rem !important;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.2), 0 10px 30px rgba(0,0,0,0.15) !important;
+        }
+
+        .modal {
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+        }

@@ -15,8 +15,64 @@
             } else {
                 console.log('✅ Todas as bibliotecas carregadas');
             }
+
+            // ===== Ripple Effect em botões =====
+            document.addEventListener('click', (e) => {
+                const btn = e.target.closest('button, .btn-primary');
+                if (!btn || btn.disabled) return;
+                const rect = btn.getBoundingClientRect();
+                const ripple = document.createElement('span');
+                ripple.className = 'ripple-wave';
+                const size = Math.max(rect.width, rect.height);
+                ripple.style.cssText = `width:${size}px;height:${size}px;left:${e.clientX - rect.left - size/2}px;top:${e.clientY - rect.top - size/2}px`;
+                btn.appendChild(ripple);
+                ripple.addEventListener('animationend', () => ripple.remove());
+            });
         });
-        
+
+        // ===== SISTEMA GLOBAL DE TOAST NOTIFICATIONS =====
+        window.showToast = function(message, type = 'info', duration = 5000) {
+            const container = document.getElementById('toast-container');
+            if (!container) return;
+
+            const icons = { success: '✅', error: '❌', warning: '⚠️', info: 'ℹ️' };
+
+            // Separar primeira linha (título) das demais (corpo)
+            const linhas = message.replace(/\\n/g, '\n').split('\n').map(l => l.trim()).filter(Boolean);
+            // Limpar emojis do início para o título
+            const titulo = linhas[0] || '';
+            const corpo = linhas.slice(1).join(' ') || '';
+
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.style.setProperty('--toast-duration', `${duration}ms`);
+            toast.innerHTML = `
+                <span class="toast-icon">${icons[type] || 'ℹ️'}</span>
+                <div class="toast-body">
+                    <div class="toast-title">${titulo}</div>
+                    ${corpo ? `<div class="toast-message">${corpo}</div>` : ''}
+                </div>
+                <button class="toast-close" aria-label="Fechar">✕</button>
+            `;
+
+            toast.querySelector('.toast-close').addEventListener('click', () => {
+                toast.classList.add('removing');
+                setTimeout(() => toast.remove(), 300);
+            });
+
+            container.appendChild(toast);
+
+            if (duration > 0) {
+                setTimeout(() => {
+                    if (!toast.isConnected) return;
+                    toast.classList.add('removing');
+                    setTimeout(() => toast.remove(), 300);
+                }, duration);
+            }
+
+            return toast;
+        };
+
         // Firebase v11.6.1
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -149,15 +205,13 @@
                     console.error("❌ Erro ao inicializar Firebase:", error);
                     
                     if (error.code === 'auth/network-request-failed') {
-                        alert('❌ Erro de conexão!\n\nVerifique sua internet e tente novamente.');
+                        showToast('❌ Sem conexão\nVerifique sua internet e tente novamente.', 'error', 7000);
                     } else if (error.code === 'auth/invalid-api-key') {
-                        alert('❌ Configuração do Firebase inválida!\n\nEntre em contato com o administrador.');
+                        showToast('❌ Configuração inválida\nEntre em contato com o administrador.', 'error', 8000);
                     } else if (error.message?.includes('quota') || error.message?.includes('exceeded')) {
-                        alert('⚠️ Cota do Firebase esgotada!\n\n' +
-                              'O sistema está temporariamente indisponível.\n' +
-                              'Aguarde a renovação ou upgrade do plano.');
+                        showToast('⚠️ Cota do Firebase esgotada\nO sistema está temporariamente indisponível. Aguarde a renovação ou upgrade do plano.', 'warning', 10000);
                     } else {
-                        alert(`❌ Erro ao conectar ao Firebase:\n${error.message}\n\nRecarregue a página ou entre em contato com suporte.`);
+                        showToast(`❌ Erro Firebase\n${error.message}`, 'error', 8000);
                     }
                     
                     this.showAuthScreen();
@@ -1502,7 +1556,7 @@
                     const confirmPassword = document.getElementById('register-password-confirm').value;
                     
                     if (password !== confirmPassword) {
-                        alert("❌ As senhas não coincidem!");
+                        showToast('❌ As senhas não coincidem\nVerifique e tente novamente.', 'error');
                         return;
                     }
                     
@@ -1634,8 +1688,8 @@
                     const inactive = Date.now() - this.state.security.lastActivity;
                     if (inactive > this.state.security.sessionTimeout) {
                         if (this.state.currentUser) {
-                            alert('⏰ Sessão expirada por inatividade.\n\nPor segurança, você será desconectado.');
-                            this.handleLogout();
+                            showToast('⏰ Sessão expirada\nPor inatividade, você será desconectado agora.', 'warning', 4000);
+                            setTimeout(() => this.handleLogout(), 2000);
                         }
                     }
                 }, 60000); // Verificar a cada 1 minuto
@@ -1658,7 +1712,7 @@
                 // Verificar bloqueio por tentativas
                 const lockCheck = this.checkLoginLockout();
                 if (lockCheck.locked) {
-                    alert(lockCheck.message);
+                    showToast(lockCheck.message, 'error', 8000);
                     return;
                 }
                 
@@ -1690,10 +1744,10 @@
                     let message = `❌ Erro: ${this.getAuthErrorMessage(error.code)}`;
                     
                     if (remainingAttempts > 0 && remainingAttempts <= 3) {
-                        message += `\n\n⚠️ Tentativas restantes: ${remainingAttempts}`;
+                        message += `\nTentativas restantes: ${remainingAttempts}`;
                     }
                     
-                    alert(message);
+                    showToast(message, 'error', 6000);
                 } finally {
                     btnLogin.disabled = false;
                     btnLogin.textContent = '🚀 Entrar';
@@ -1708,7 +1762,7 @@
                 // Validar senha forte
                 const passwordCheck = this.validatePasswordStrength(password);
                 if (!passwordCheck.isValid) {
-                    alert(`🔒 Senha fraca!\n\n${passwordCheck.message}\n\nPor segurança, use uma senha mais forte.`);
+                    showToast(`🔒 Senha fraca\n${passwordCheck.message}`, 'warning', 6000);
                     return;
                 }
                 
@@ -1770,7 +1824,7 @@
                     // Aguardar um pouco para garantir que o documento foi salvo
                     await new Promise(resolve => setTimeout(resolve, 1000));
                     
-                    alert(`✅ Conta criada e login realizado com sucesso!\n\nVocê foi registrado como: ${role === 'dono' ? '👑 Proprietário' : '👁️ Visualizador'}\n\nAguarde enquanto carregamos o sistema...`);
+                    showToast(`✅ Conta criada com sucesso!\nVocê foi registrado como ${role === 'dono' ? '👑 Proprietário' : '👁️ Visualizador'}. Carregando o sistema...`, 'success', 6000);
                     
                     // NÃO fazer logout - deixar o sistema carregar automaticamente via onAuthStateChanged
                     console.log("✅ Login automático após registro");
@@ -1792,7 +1846,7 @@
                         mensagemErro = 'Erro de permissão. Verifique as regras do Firestore no console do Firebase.';
                     }
                     
-                    alert(`❌ Erro ao criar conta:\n${mensagemErro}`);
+                    showToast(`❌ Erro ao criar conta\n${mensagemErro}`, 'error', 7000);
                 } finally {
                     btnRegister.disabled = false;
                     btnRegister.textContent = '✅ Criar Conta';
@@ -1821,7 +1875,7 @@
                     
                     if (!userDocSnap.exists()) {
                         console.error("❌ Documento do usuário não encontrado após 3 tentativas");
-                        alert("❌ Erro: Dados do usuário não encontrados.\n\nPor favor, tente fazer login novamente.\n\nSe o problema persistir, entre em contato com o administrador.");
+                        showToast('❌ Dados do usuário não encontrados\nTente fazer login novamente. Se persistir, contate o administrador.', 'error', 8000);
                         await signOut(this.state.auth);
                         return;
                     }
@@ -1830,7 +1884,7 @@
                     
                     // Verificar se usuário está ativo
                     if (!userData.ativo) {
-                        alert("❌ Sua conta foi desativada. Entre em contato com o administrador.");
+                        showToast('❌ Conta desativada\nEntre em contato com o administrador.', 'error', 8000);
                         await signOut(this.state.auth);
                         return;
                     }
@@ -1883,9 +1937,9 @@
                     console.error("❌ Erro ao carregar usuário:", error);
                     
                     if (error.code === 'permission-denied') {
-                        alert("❌ Erro de permissão ao carregar dados.\n\nVerifique as regras do Firestore no Firebase Console.");
+                        showToast('❌ Erro de permissão\nVerifique as regras do Firestore no Firebase Console.', 'error', 8000);
                     } else {
-                        alert("❌ Erro ao carregar dados.\n\nTente novamente ou entre em contato com o suporte.");
+                        showToast('❌ Erro ao carregar dados\nTente novamente ou entre em contato com o suporte.', 'error', 7000);
                     }
                     
                     await signOut(this.state.auth);
