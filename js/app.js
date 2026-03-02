@@ -6312,20 +6312,71 @@
                     return;
                 }
                 
-                // Calcular totais
                 const totalPesoBruto = pesagens.reduce((acc, p) => acc + (Number(p.pesoBruto) || 0), 0);
                 const totalTara = pesagens.reduce((acc, p) => acc + (Number(p.tara) || 0), 0);
                 const totalPesoLiquido = pesagens.reduce((acc, p) => acc + (Number(p.pesoLiquido) || 0), 0);
                 const totalPesoNota = pesagens.reduce((acc, p) => acc + (Number(p.pesoNota) || 0), 0);
+                const mediaPesoLiquido = pesagens.length > 0 ? totalPesoLiquido / pesagens.length : 0;
+                const maiorPesoLiquido = pesagens.length > 0 ? Math.max(...pesagens.map(p => Number(p.pesoLiquido) || 0)) : 0;
+                const pesagensComNota = pesagens.filter(p => (Number(p.pesoNota) || 0) > 0);
+                const divergenciasQtd = pesagensComNota.filter(p => {
+                    const pesoNota = Number(p.pesoNota) || 0;
+                    if (pesoNota <= 0) return false;
+                    const percentual = Math.abs(((Number(p.pesoLiquido) || 0) - pesoNota) / pesoNota) * 100;
+                    return percentual > 5;
+                }).length;
+                const taxaConformidade = pesagensComNota.length > 0
+                    ? ((pesagensComNota.length - divergenciasQtd) / pesagensComNota.length) * 100
+                    : 100;
 
-                // ===== PREPARAR DADOS =====
+                const produtosRanking = Object.entries(pesagens.reduce((acc, p) => {
+                    const nome = p.produto || 'N/A';
+                    if (!acc[nome]) acc[nome] = { viagens: 0, peso: 0 };
+                    acc[nome].viagens += 1;
+                    acc[nome].peso += Number(p.pesoLiquido) || 0;
+                    return acc;
+                }, {})).sort(([, a], [, b]) => b.peso - a.peso).slice(0, 5);
+
+                const transportadorasRanking = Object.entries(pesagens.reduce((acc, p) => {
+                    const nome = p.transportadora || 'Sem transportadora';
+                    if (!acc[nome]) acc[nome] = { viagens: 0, peso: 0 };
+                    acc[nome].viagens += 1;
+                    acc[nome].peso += Number(p.pesoLiquido) || 0;
+                    return acc;
+                }, {})).sort(([, a], [, b]) => b.peso - a.peso).slice(0, 5);
+
+                const fornecedoresResumo = Object.entries(pesagens.reduce((acc, p) => {
+                    const nome = (p.cliente && String(p.cliente).trim()) ? String(p.cliente).trim() : 'Sem Fornecedor';
+                    if (!acc[nome]) acc[nome] = { viagens: 0, peso: 0, placas: new Set() };
+                    acc[nome].viagens += 1;
+                    acc[nome].peso += Number(p.pesoLiquido) || 0;
+                    if (p.placa) acc[nome].placas.add(String(p.placa).trim().toUpperCase());
+                    return acc;
+                }, {})).map(([nome, dados]) => ({
+                    nome,
+                    viagens: dados.viagens,
+                    carretas: dados.placas.size,
+                    peso: dados.peso
+                })).sort((a, b) => b.peso - a.peso);
+
+                const produtosResumo = Object.entries(pesagens.reduce((acc, p) => {
+                    const nome = (p.produto && String(p.produto).trim()) ? String(p.produto).trim() : 'N/A';
+                    if (!acc[nome]) acc[nome] = { viagens: 0, peso: 0 };
+                    acc[nome].viagens += 1;
+                    acc[nome].peso += Number(p.pesoLiquido) || 0;
+                    return acc;
+                }, {})).map(([nome, dados]) => ({
+                    nome,
+                    viagens: dados.viagens,
+                    peso: dados.peso
+                })).sort((a, b) => b.peso - a.peso);
+
                 const dados = pesagens.map((p, index) => {
                     let obs = p.observacao || '';
                     if (p.isPesagemDupla) { 
                         obs += ` [P. Dupla: P1(${p.peso1_eixo1}+${p.peso1_eixo2}) P2(${p.peso2_eixo1}+${p.peso2_eixo2})]`; 
                     }
-                    
-                    // Calcular diferença e porcentagem
+
                     const pesoLiquido = Number(p.pesoLiquido) || 0;
                     const pesoNota = Number(p.pesoNota) || 0;
                     const diferenca = pesoNota > 0 ? (pesoLiquido - pesoNota) : '';
@@ -6360,8 +6411,6 @@
                 
                 let currentRow = 0;
                 
-                // ===== CABEÇALHO PROFISSIONAL COM CORES =====
-                // Linha 1: Título principal (mesclado) - AZUL ESCURO
                 ws['A1'] = { t: 's', v: titulo, s: {
                     font: { name: 'Calibri', sz: 18, bold: true, color: { rgb: 'FFFFFF' } },
                     alignment: { vertical: 'center', horizontal: 'center' },
@@ -6370,7 +6419,6 @@
                 }};
                 currentRow++;
                 
-                // Linha 2: Nome da empresa - CINZA CLARO
                 ws['A2'] = { t: 's', v: config.nome || 'Empresa', s: {
                     font: { name: 'Calibri', sz: 14, bold: true },
                     alignment: { vertical: 'center', horizontal: 'center' },
@@ -6379,7 +6427,6 @@
                 }};
                 currentRow++;
                 
-                // Linha 3: Período
                 const dataInicio = this.dom.filtroDataInicio.value;
                 const dataFim = this.dom.filtroDataFim.value;
                 let periodo = 'Período: Todos os registros';
@@ -6393,17 +6440,15 @@
                 }};
                 currentRow++;
                 
-                // Linha 4: Data de geração
                 ws['A4'] = { t: 's', v: `Gerado em: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}`, s: {
                     font: { name: 'Calibri', sz: 10, italic: true },
                     alignment: { vertical: 'center', horizontal: 'left' },
                     fill: { patternType: 'solid', fgColor: { rgb: 'F2F2F2' } }
                 }};
                 currentRow++;
-                
-                currentRow++; // Linha em branco
-                
-                // ===== RESUMO EXECUTIVO COM DESTAQUE =====
+
+                currentRow++;
+
                 ws[`A${currentRow + 1}`] = { t: 's', v: '📊 RESUMO EXECUTIVO', s: {
                     font: { name: 'Calibri', sz: 14, bold: true, color: { rgb: 'FFFFFF' } },
                     alignment: { vertical: 'center', horizontal: 'center' },
@@ -6411,31 +6456,40 @@
                     border: { top: { style: 'medium' }, bottom: { style: 'medium' }, left: { style: 'medium' }, right: { style: 'medium' } }
                 }};
                 currentRow++;
-                
-                // Linha de resumo 1
+
                 const resumoRow1 = currentRow + 1;
                 ws[`A${resumoRow1}`] = { t: 's', v: 'Total de Pesagens:', s: { font: { bold: true }, alignment: { horizontal: 'right' }, fill: { patternType: 'solid', fgColor: { rgb: 'E7E6E6' } } }};
                 ws[`B${resumoRow1}`] = { t: 'n', v: pesagens.length, s: { font: { bold: true, color: { rgb: '0D9488' } }, alignment: { horizontal: 'center' }, fill: { patternType: 'solid', fgColor: { rgb: 'E7E6E6' } }, numFmt: '#,##0' }};
                 ws[`D${resumoRow1}`] = { t: 's', v: 'Peso Bruto Total (kg):', s: { font: { bold: true }, alignment: { horizontal: 'right' }, fill: { patternType: 'solid', fgColor: { rgb: 'E7E6E6' } } }};
                 ws[`E${resumoRow1}`] = { t: 'n', v: totalPesoBruto, s: { font: { bold: true, color: { rgb: '0D9488' } }, alignment: { horizontal: 'center' }, fill: { patternType: 'solid', fgColor: { rgb: 'E7E6E6' } }, numFmt: '#,##0' }};
                 currentRow++;
-                
-                // Linha de resumo 2
+
                 const resumoRow2 = currentRow + 1;
                 ws[`A${resumoRow2}`] = { t: 's', v: 'Peso Líquido Total (kg):', s: { font: { bold: true }, alignment: { horizontal: 'right' }, fill: { patternType: 'solid', fgColor: { rgb: 'E7E6E6' } } }};
                 ws[`B${resumoRow2}`] = { t: 'n', v: totalPesoLiquido, s: { font: { bold: true, color: { rgb: '0D9488' } }, alignment: { horizontal: 'center' }, fill: { patternType: 'solid', fgColor: { rgb: 'E7E6E6' } }, numFmt: '#,##0' }};
                 ws[`D${resumoRow2}`] = { t: 's', v: 'Tara Total (kg):', s: { font: { bold: true }, alignment: { horizontal: 'right' }, fill: { patternType: 'solid', fgColor: { rgb: 'E7E6E6' } } }};
                 ws[`E${resumoRow2}`] = { t: 'n', v: totalTara, s: { font: { bold: true, color: { rgb: '0D9488' } }, alignment: { horizontal: 'center' }, fill: { patternType: 'solid', fgColor: { rgb: 'E7E6E6' } }, numFmt: '#,##0' }};
                 currentRow++;
-                
-                currentRow++; // Linha em branco
-                
-                // ===== TABELA DE DADOS COM FORMATAÇÃO PROFISSIONAL =====
+
+                const resumoRow3 = currentRow + 1;
+                ws[`A${resumoRow3}`] = { t: 's', v: 'Média Peso Líquido/Ticket (kg):', s: { font: { bold: true }, alignment: { horizontal: 'right' }, fill: { patternType: 'solid', fgColor: { rgb: 'E7E6E6' } } }};
+                ws[`B${resumoRow3}`] = { t: 'n', v: mediaPesoLiquido, s: { font: { bold: true, color: { rgb: '0D9488' } }, alignment: { horizontal: 'center' }, fill: { patternType: 'solid', fgColor: { rgb: 'E7E6E6' } }, numFmt: '#,##0' }};
+                ws[`D${resumoRow3}`] = { t: 's', v: 'Maior Peso Líquido (kg):', s: { font: { bold: true }, alignment: { horizontal: 'right' }, fill: { patternType: 'solid', fgColor: { rgb: 'E7E6E6' } } }};
+                ws[`E${resumoRow3}`] = { t: 'n', v: maiorPesoLiquido, s: { font: { bold: true, color: { rgb: '0D9488' } }, alignment: { horizontal: 'center' }, fill: { patternType: 'solid', fgColor: { rgb: 'E7E6E6' } }, numFmt: '#,##0' }};
+                currentRow++;
+
+                const resumoRow4 = currentRow + 1;
+                ws[`A${resumoRow4}`] = { t: 's', v: 'Pesagens c/ Nota Fiscal:', s: { font: { bold: true }, alignment: { horizontal: 'right' }, fill: { patternType: 'solid', fgColor: { rgb: 'E7E6E6' } } }};
+                ws[`B${resumoRow4}`] = { t: 'n', v: pesagensComNota.length, s: { font: { bold: true, color: { rgb: '0D9488' } }, alignment: { horizontal: 'center' }, fill: { patternType: 'solid', fgColor: { rgb: 'E7E6E6' } }, numFmt: '#,##0' }};
+                ws[`D${resumoRow4}`] = { t: 's', v: 'Conformidade (±5%):', s: { font: { bold: true }, alignment: { horizontal: 'right' }, fill: { patternType: 'solid', fgColor: { rgb: 'E7E6E6' } } }};
+                ws[`E${resumoRow4}`] = { t: 'n', v: taxaConformidade, s: { font: { bold: true, color: { rgb: '0D9488' } }, alignment: { horizontal: 'center' }, fill: { patternType: 'solid', fgColor: { rgb: 'E7E6E6' } }, numFmt: '0.00"%"' }};
+                currentRow++;
+
+                currentRow++;
+
                 const dataStartRow = currentRow + 1;
-                
-                // CABEÇALHOS DA TABELA - VERDE TEAL COM BRANCO
                 const headers = ['#', 'Nº Ticket', 'Nota Fiscal', 'Data Entrada', 'Data Saída', 'Placa', 'Motorista', 'Cliente/Forn.', 'Transportadora', 'Obra', 'Produto', 'Certificado', 'Peso Bruto (kg)', 'Tara (kg)', 'Peso Líquido (kg)', 'Peso Nota (kg)', '⚖️ Dif. (kg)', '📈 Dif. (%)', 'Observação'];
-                
+
                 headers.forEach((header, colIndex) => {
                     const cellAddr = XLSX.utils.encode_cell({ r: dataStartRow - 1, c: colIndex });
                     ws[cellAddr] = { t: 's', v: header, s: {
@@ -6445,17 +6499,16 @@
                         border: { top: { style: 'medium' }, bottom: { style: 'medium' }, left: { style: 'thin' }, right: { style: 'thin' } }
                     }};
                 });
-                
-                // DADOS DA TABELA - ZEBRA STRIPING
+
                 dados.forEach((row, rowIndex) => {
                     const excelRow = dataStartRow + rowIndex;
                     const isEven = rowIndex % 2 === 0;
                     const fillColor = isEven ? 'FFFFFF' : 'F2F2F2';
-                    
-                    // Verificar se é divergente
+                    const pesoLiquidoLinha = Number(row.pesoLiquido) || 0;
+
                     const isDivergente = row.diferenca && Math.abs(row.diferenca) > 50;
                     const divergenciaColor = isDivergente ? 'FFF2CC' : fillColor;
-                    
+
                     const cellData = [
                         { v: row.num, t: 'n' },
                         { v: row.ticket, t: 's' },
@@ -6477,7 +6530,7 @@
                         { v: row.percentual, t: row.percentual ? 'n' : 's' },
                         { v: row.observacao, t: 's' }
                     ];
-                    
+
                     cellData.forEach((cell, colIndex) => {
                         const cellAddr = XLSX.utils.encode_cell({ r: excelRow, c: colIndex });
                         const cellStyle = {
@@ -6486,36 +6539,68 @@
                             fill: { patternType: 'solid', fgColor: { rgb: colIndex >= 16 && colIndex <= 17 ? divergenciaColor : fillColor } },
                             border: { top: { style: 'thin', color: { rgb: 'D9D9D9' } }, bottom: { style: 'thin', color: { rgb: 'D9D9D9' } }, left: { style: 'thin', color: { rgb: 'D9D9D9' } }, right: { style: 'thin', color: { rgb: 'D9D9D9' } } }
                         };
-                        
-                        // Formatos numéricos
+
                         if (cell.t === 'n' && colIndex >= 12 && colIndex <= 17) {
                             cellStyle.numFmt = '#,##0';
-                            if (colIndex === 17 && cell.v !== '') cellStyle.numFmt = '0.00"%"'; // Percentual
+                            if (colIndex === 17 && cell.v !== '') cellStyle.numFmt = '0.00"%"';
                         }
-                        
-                        // Formato de data
+
                         if (cell.t === 'd') {
                             cellStyle.numFmt = 'dd/mm/yyyy hh:mm';
                         }
-                        
-                        // Destacar diferenças negativas em vermelho
+
                         if (colIndex === 16 && cell.v < 0) {
                             cellStyle.font.color = { rgb: 'FF0000' };
                             cellStyle.font.bold = true;
                         }
-                        
+
+                        if (colIndex === 17 && typeof cell.v === 'number') {
+                            const percentualAbs = Math.abs(cell.v);
+                            if (percentualAbs > 5) {
+                                cellStyle.fill = { patternType: 'solid', fgColor: { rgb: 'FFC7CE' } };
+                                cellStyle.font.color = { rgb: '9C0006' };
+                                cellStyle.font.bold = true;
+                            } else if (percentualAbs > 2) {
+                                cellStyle.fill = { patternType: 'solid', fgColor: { rgb: 'FFEB9C' } };
+                                cellStyle.font.color = { rgb: '9C6500' };
+                            } else {
+                                cellStyle.fill = { patternType: 'solid', fgColor: { rgb: 'C6EFCE' } };
+                                cellStyle.font.color = { rgb: '006100' };
+                            }
+                        }
+
+                        if (colIndex >= 12 && colIndex <= 14) {
+                            if (pesoLiquidoLinha >= 20000) {
+                                cellStyle.fill = { patternType: 'solid', fgColor: { rgb: 'C6EFCE' } };
+                                cellStyle.font.color = { rgb: '006100' };
+                                cellStyle.font.bold = true;
+                            } else if (pesoLiquidoLinha < 5000) {
+                                cellStyle.fill = { patternType: 'solid', fgColor: { rgb: 'FFC7CE' } };
+                                cellStyle.font.color = { rgb: '9C0006' };
+                            } else {
+                                cellStyle.fill = { patternType: 'solid', fgColor: { rgb: 'FFEB9C' } };
+                                cellStyle.font.color = { rgb: '9C6500' };
+                            }
+                        }
+
                         ws[cellAddr] = { t: cell.t, v: cell.v, s: cellStyle };
                     });
                 });
-                
-                // LINHA DE TOTAIS - DESTAQUE EM NEGRITO
+
                 const totalRow = dataStartRow + dados.length;
                 const diferencaTotal = totalPesoNota > 0 ? (totalPesoLiquido - totalPesoNota) : '';
                 const percentualTotal = totalPesoNota > 0 ? (((totalPesoLiquido - totalPesoNota) / totalPesoNota) * 100) : '';
-                
+                const firstDataExcelRow = dataStartRow + 1;
+                const lastDataExcelRow = dataStartRow + dados.length;
+                const totalExcelRow = totalRow + 1;
+                const colBruto = XLSX.utils.encode_col(12);
+                const colTara = XLSX.utils.encode_col(13);
+                const colLiquido = XLSX.utils.encode_col(14);
+                const colPesoNota = XLSX.utils.encode_col(15);
+
                 const totaisData = [
                     { v: '', t: 's' },
-                    { v: '⭐ TOTAIS', t: 's' },
+                    { v: '⭐ TOTAIS (SOMA)', t: 's' },
                     { v: '', t: 's' },
                     { v: '', t: 's' },
                     { v: '', t: 's' },
@@ -6526,15 +6611,15 @@
                     { v: '', t: 's' },
                     { v: '', t: 's' },
                     { v: '', t: 's' },
-                    { v: totalPesoBruto, t: 'n' },
-                    { v: totalTara, t: 'n' },
-                    { v: totalPesoLiquido, t: 'n' },
-                    { v: totalPesoNota > 0 ? totalPesoNota : '', t: totalPesoNota > 0 ? 'n' : 's' },
-                    { v: diferencaTotal, t: diferencaTotal ? 'n' : 's' },
-                    { v: percentualTotal, t: percentualTotal ? 'n' : 's' },
+                    { t: 'n', f: `SUM(${colBruto}${firstDataExcelRow}:${colBruto}${lastDataExcelRow})` },
+                    { t: 'n', f: `SUM(${colTara}${firstDataExcelRow}:${colTara}${lastDataExcelRow})` },
+                    { t: 'n', f: `SUM(${colLiquido}${firstDataExcelRow}:${colLiquido}${lastDataExcelRow})` },
+                    { t: totalPesoNota > 0 ? 'n' : 's', ...(totalPesoNota > 0 ? { f: `SUM(${colPesoNota}${firstDataExcelRow}:${colPesoNota}${lastDataExcelRow})` } : { v: '' }) },
+                    { t: diferencaTotal ? 'n' : 's', ...(diferencaTotal ? { f: `${colLiquido}${totalExcelRow}-${colPesoNota}${totalExcelRow}` } : { v: '' }) },
+                    { t: percentualTotal ? 'n' : 's', ...(percentualTotal ? { f: `IF(${colPesoNota}${totalExcelRow}=0,0,(${colLiquido}${totalExcelRow}-${colPesoNota}${totalExcelRow})/${colPesoNota}${totalExcelRow})` } : { v: '' }) },
                     { v: `${pesagens.length} viagens`, t: 's' }
                 ];
-                
+
                 totaisData.forEach((cell, colIndex) => {
                     const cellAddr = XLSX.utils.encode_cell({ r: totalRow, c: colIndex });
                     const cellStyle = {
@@ -6546,63 +6631,340 @@
                     
                     if (cell.t === 'n') {
                         cellStyle.numFmt = '#,##0';
-                        if (colIndex === 17 && cell.v !== '') cellStyle.numFmt = '0.00"%"';
+                        if (colIndex === 17) cellStyle.numFmt = '0.00"%"';
                     }
-                    
+
                     ws[cellAddr] = { t: cell.t, v: cell.v, s: cellStyle };
                 });
-                
-                // ===== CONFIGURAÇÕES FINAIS =====
-                // Larguras das colunas otimizadas
-                ws['!cols'] = [
-                    { wch: 6 },   // #
-                    { wch: 12 },  // Nº Ticket
-                    { wch: 15 },  // Nota Fiscal
-                    { wch: 18 },  // Data Entrada
-                    { wch: 18 },  // Data Saída
-                    { wch: 12 },  // Placa
-                    { wch: 25 },  // Motorista
-                    { wch: 28 },  // Cliente/Forn.
-                    { wch: 30 },  // Transportadora
-                    { wch: 22 },  // Obra
-                    { wch: 28 },  // Produto
-                    { wch: 16 },  // Certificado
-                    { wch: 16 },  // Peso Bruto
-                    { wch: 14 },  // Tara
-                    { wch: 18 },  // Peso Líquido
-                    { wch: 16 },  // Peso Nota
-                    { wch: 14 },  // Dif. (kg)
-                    { wch: 12 },  // Dif. (%)
-                    { wch: 45 }   // Observação
+
+                const rankingStartRow = totalRow + 2;
+                ws[`A${rankingStartRow}`] = { t: 's', v: '🏆 RANKING MENSAL (TOP 5)', s: {
+                    font: { name: 'Calibri', sz: 12, bold: true, color: { rgb: 'FFFFFF' } },
+                    alignment: { vertical: 'center', horizontal: 'center' },
+                    fill: { patternType: 'solid', fgColor: { rgb: '1F4788' } },
+                    border: { top: { style: 'medium' }, bottom: { style: 'medium' }, left: { style: 'medium' }, right: { style: 'medium' } }
+                }};
+
+                const rankingHeaderRow = rankingStartRow + 1;
+                const rankingHeaders = [
+                    { col: 'A', value: 'Produto' },
+                    { col: 'B', value: 'Viagens' },
+                    { col: 'C', value: 'Peso Líquido (kg)' },
+                    { col: 'E', value: 'Transportadora' },
+                    { col: 'F', value: 'Viagens' },
+                    { col: 'G', value: 'Peso Líquido (kg)' }
                 ];
-                
-                // Auto-filtro
+
+                rankingHeaders.forEach(({ col, value }) => {
+                    ws[`${col}${rankingHeaderRow}`] = { t: 's', v: value, s: {
+                        font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: 'FFFFFF' } },
+                        alignment: { vertical: 'center', horizontal: 'center' },
+                        fill: { patternType: 'solid', fgColor: { rgb: '0D9488' } },
+                        border: { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } }
+                    }};
+                });
+
+                const maxRankingRows = Math.max(produtosRanking.length, transportadorasRanking.length, 5);
+                for (let i = 0; i < maxRankingRows; i++) {
+                    const row = rankingHeaderRow + 1 + i;
+                    const zebra = i % 2 === 0 ? 'FFFFFF' : 'F8FAFC';
+                    const produto = produtosRanking[i];
+                    const transportadora = transportadorasRanking[i];
+
+                    const estiloBase = {
+                        font: { name: 'Calibri', sz: 10 },
+                        alignment: { vertical: 'center', horizontal: 'left' },
+                        fill: { patternType: 'solid', fgColor: { rgb: zebra } },
+                        border: { top: { style: 'thin', color: { rgb: 'D9D9D9' } }, bottom: { style: 'thin', color: { rgb: 'D9D9D9' } }, left: { style: 'thin', color: { rgb: 'D9D9D9' } }, right: { style: 'thin', color: { rgb: 'D9D9D9' } } }
+                    };
+
+                    ws[`A${row}`] = { t: 's', v: produto ? produto[0] : '-', s: estiloBase };
+                    ws[`B${row}`] = { t: 'n', v: produto ? produto[1].viagens : 0, s: { ...estiloBase, alignment: { vertical: 'center', horizontal: 'center' }, numFmt: '#,##0' } };
+                    ws[`C${row}`] = { t: 'n', v: produto ? produto[1].peso : 0, s: { ...estiloBase, alignment: { vertical: 'center', horizontal: 'right' }, numFmt: '#,##0' } };
+
+                    ws[`E${row}`] = { t: 's', v: transportadora ? transportadora[0] : '-', s: estiloBase };
+                    ws[`F${row}`] = { t: 'n', v: transportadora ? transportadora[1].viagens : 0, s: { ...estiloBase, alignment: { vertical: 'center', horizontal: 'center' }, numFmt: '#,##0' } };
+                    ws[`G${row}`] = { t: 'n', v: transportadora ? transportadora[1].peso : 0, s: { ...estiloBase, alignment: { vertical: 'center', horizontal: 'right' }, numFmt: '#,##0' } };
+                }
+
+                const resumoOperacionalStartRow = rankingHeaderRow + maxRankingRows + 2;
+                ws[`A${resumoOperacionalStartRow}`] = { t: 's', v: '🚛 CARRETAS POR FORNECEDOR', s: {
+                    font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
+                    alignment: { vertical: 'center', horizontal: 'center' },
+                    fill: { patternType: 'solid', fgColor: { rgb: '1F4788' } },
+                    border: { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } }
+                }};
+                ws[`F${resumoOperacionalStartRow}`] = { t: 's', v: '📦 PESO TOTAL POR PRODUTO', s: {
+                    font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
+                    alignment: { vertical: 'center', horizontal: 'center' },
+                    fill: { patternType: 'solid', fgColor: { rgb: '1F4788' } },
+                    border: { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } }
+                }};
+
+                const resumoOpHeaderRow = resumoOperacionalStartRow + 1;
+                const headerStyleResumoOp = {
+                    font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: 'FFFFFF' } },
+                    alignment: { vertical: 'center', horizontal: 'center' },
+                    fill: { patternType: 'solid', fgColor: { rgb: '0D9488' } },
+                    border: { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } }
+                };
+
+                ws[`A${resumoOpHeaderRow}`] = { t: 's', v: 'Fornecedor', s: headerStyleResumoOp };
+                ws[`B${resumoOpHeaderRow}`] = { t: 's', v: 'Viagens', s: headerStyleResumoOp };
+                ws[`C${resumoOpHeaderRow}`] = { t: 's', v: 'Carretas', s: headerStyleResumoOp };
+                ws[`D${resumoOpHeaderRow}`] = { t: 's', v: 'Peso Líquido (kg)', s: headerStyleResumoOp };
+                ws[`F${resumoOpHeaderRow}`] = { t: 's', v: 'Produto', s: headerStyleResumoOp };
+                ws[`G${resumoOpHeaderRow}`] = { t: 's', v: 'Viagens', s: headerStyleResumoOp };
+                ws[`H${resumoOpHeaderRow}`] = { t: 's', v: 'Peso Líquido (kg)', s: headerStyleResumoOp };
+
+                const resumoRows = Math.max(fornecedoresResumo.length, produtosResumo.length, 5);
+                for (let i = 0; i < resumoRows; i++) {
+                    const row = resumoOpHeaderRow + 1 + i;
+                    const zebra = i % 2 === 0 ? 'FFFFFF' : 'F8FAFC';
+                    const baseStyle = {
+                        font: { name: 'Calibri', sz: 10 },
+                        alignment: { vertical: 'center', horizontal: 'left' },
+                        fill: { patternType: 'solid', fgColor: { rgb: zebra } },
+                        border: { top: { style: 'thin', color: { rgb: 'D9D9D9' } }, bottom: { style: 'thin', color: { rgb: 'D9D9D9' } }, left: { style: 'thin', color: { rgb: 'D9D9D9' } }, right: { style: 'thin', color: { rgb: 'D9D9D9' } } }
+                    };
+
+                    const forn = fornecedoresResumo[i];
+                    ws[`A${row}`] = { t: 's', v: forn ? forn.nome : '-', s: baseStyle };
+                    ws[`B${row}`] = { t: 'n', v: forn ? forn.viagens : 0, s: { ...baseStyle, alignment: { vertical: 'center', horizontal: 'center' }, numFmt: '#,##0' } };
+                    ws[`C${row}`] = { t: 'n', v: forn ? forn.carretas : 0, s: { ...baseStyle, alignment: { vertical: 'center', horizontal: 'center' }, numFmt: '#,##0' } };
+                    ws[`D${row}`] = { t: 'n', v: forn ? forn.peso : 0, s: { ...baseStyle, alignment: { vertical: 'center', horizontal: 'right' }, numFmt: '#,##0' } };
+
+                    const prod = produtosResumo[i];
+                    ws[`F${row}`] = { t: 's', v: prod ? prod.nome : '-', s: baseStyle };
+                    ws[`G${row}`] = { t: 'n', v: prod ? prod.viagens : 0, s: { ...baseStyle, alignment: { vertical: 'center', horizontal: 'center' }, numFmt: '#,##0' } };
+                    ws[`H${row}`] = { t: 'n', v: prod ? prod.peso : 0, s: { ...baseStyle, alignment: { vertical: 'center', horizontal: 'right' }, numFmt: '#,##0' } };
+                }
+
+                const assinaturaRow = resumoOpHeaderRow + resumoRows + 2;
+                ws[`A${assinaturaRow}`] = { t: 's', v: `Relatório gerado por: ${this.state.userDoc?.nome || this.state.currentUser?.email || 'Sistema'}`, s: {
+                    font: { name: 'Calibri', sz: 10, italic: true, color: { rgb: '666666' } },
+                    alignment: { vertical: 'center', horizontal: 'left' }
+                }};
+                ws[`A${assinaturaRow + 1}`] = { t: 's', v: `Divergências acima de 5%: ${divergenciasQtd} de ${pesagensComNota.length} pesagens com nota fiscal`, s: {
+                    font: { name: 'Calibri', sz: 10, italic: true, color: { rgb: '666666' } },
+                    alignment: { vertical: 'center', horizontal: 'left' }
+                }};
+
+                ws['!cols'] = [
+                    { wch: 6 }, { wch: 12 }, { wch: 15 }, { wch: 18 }, { wch: 18 },
+                    { wch: 12 }, { wch: 25 }, { wch: 28 }, { wch: 30 }, { wch: 22 },
+                    { wch: 28 }, { wch: 16 }, { wch: 16 }, { wch: 14 }, { wch: 18 },
+                    { wch: 16 }, { wch: 14 }, { wch: 12 }, { wch: 45 }
+                ];
+
                 ws['!autofilter'] = { ref: `A${dataStartRow - 1}:S${totalRow}` };
-                
-                // Congelar painéis - congelar cabeçalho
                 ws['!freeze'] = { xSplit: 0, ySplit: dataStartRow, topLeftCell: `A${dataStartRow + 1}`, state: 'frozen' };
-                
-                // Mesclar células do cabeçalho
+
                 if (!ws['!merges']) ws['!merges'] = [];
-                ws['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 8 } }); // Título
-                ws['!merges'].push({ s: { r: 1, c: 0 }, e: { r: 1, c: 8 } }); // Nome empresa
-                ws['!merges'].push({ s: { r: 2, c: 0 }, e: { r: 2, c: 8 } }); // Período
-                ws['!merges'].push({ s: { r: 3, c: 0 }, e: { r: 3, c: 8 } }); // Data geração
-                ws['!merges'].push({ s: { r: 5, c: 0 }, e: { r: 5, c: 8 } }); // Resumo Executivo
+                ws['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 8 } });
+                ws['!merges'].push({ s: { r: 1, c: 0 }, e: { r: 1, c: 8 } });
+                ws['!merges'].push({ s: { r: 2, c: 0 }, e: { r: 2, c: 8 } });
+                ws['!merges'].push({ s: { r: 3, c: 0 }, e: { r: 3, c: 8 } });
+                ws['!merges'].push({ s: { r: 5, c: 0 }, e: { r: 5, c: 8 } });
+                ws['!merges'].push({ s: { r: rankingStartRow - 1, c: 0 }, e: { r: rankingStartRow - 1, c: 6 } });
+                ws['!merges'].push({ s: { r: resumoOperacionalStartRow - 1, c: 0 }, e: { r: resumoOperacionalStartRow - 1, c: 3 } });
+                ws['!merges'].push({ s: { r: resumoOperacionalStartRow - 1, c: 5 }, e: { r: resumoOperacionalStartRow - 1, c: 7 } });
                 
-                // Definir range
-                ws['!ref'] = `A1:S${totalRow}`;
-                
+                ws['!ref'] = `A1:S${assinaturaRow + 1}`;
+
                 XLSX.utils.book_append_sheet(wb, ws, "Pesagens");
+
+                const normalizarNomeAba = (nome, indice, usados) => {
+                    const baseLimpa = String(nome || 'Sem Fornecedor')
+                        .replace(/[\\/:?*\[\]]/g, ' ')
+                        .replace(/\s+/g, ' ')
+                        .trim() || 'Sem Fornecedor';
+
+                    let nomeAba = (`Forn - ${baseLimpa}`).slice(0, 31);
+                    if (!usados.has(nomeAba)) {
+                        usados.add(nomeAba);
+                        return nomeAba;
+                    }
+
+                    let sufixo = 2;
+                    while (true) {
+                        const tentativa = `${(`Forn - ${baseLimpa}`).slice(0, 27)}_${sufixo}`.slice(0, 31);
+                        if (!usados.has(tentativa)) {
+                            usados.add(tentativa);
+                            return tentativa;
+                        }
+                        sufixo++;
+                    }
+                };
+
+                const dadosPorFornecedor = dados.reduce((acc, item) => {
+                    const fornecedor = (item.cliente && String(item.cliente).trim()) ? String(item.cliente).trim() : 'Sem Fornecedor';
+                    if (!acc[fornecedor]) acc[fornecedor] = [];
+                    acc[fornecedor].push(item);
+                    return acc;
+                }, {});
+
+                const nomesAbasUsados = new Set(['Pesagens']);
+                const fornecedores = Object.keys(dadosPorFornecedor).sort((a, b) => a.localeCompare(b, 'pt-BR', { sensitivity: 'base' }));
+
+                fornecedores.forEach((fornecedor, idx) => {
+                    const linhasFornecedor = dadosPorFornecedor[fornecedor];
+                    const totalFornecedorBruto = linhasFornecedor.reduce((acc, i) => acc + (Number(i.pesoBruto) || 0), 0);
+                    const totalFornecedorTara = linhasFornecedor.reduce((acc, i) => acc + (Number(i.tara) || 0), 0);
+                    const totalFornecedorLiquido = linhasFornecedor.reduce((acc, i) => acc + (Number(i.pesoLiquido) || 0), 0);
+                    const totalFornecedorNota = linhasFornecedor.reduce((acc, i) => acc + (Number(i.pesoNota) || 0), 0);
+
+                    const gruposProduto = linhasFornecedor.reduce((acc, i) => {
+                        const nomeProduto = (i.produto && String(i.produto).trim()) ? String(i.produto).trim() : 'N/A';
+                        if (!acc[nomeProduto]) acc[nomeProduto] = [];
+                        acc[nomeProduto].push(i);
+                        return acc;
+                    }, {});
+
+                    const dadosAba = [];
+                    const produtosFornecedor = Object.keys(gruposProduto).sort((a, b) => a.localeCompare(b, 'pt-BR', { sensitivity: 'base' }));
+
+                    produtosFornecedor.forEach((produtoNome) => {
+                        const linhasProduto = gruposProduto[produtoNome].sort((a, b) => String(a.ticket).localeCompare(String(b.ticket), 'pt-BR', { sensitivity: 'base' }));
+                        const subtotalBruto = linhasProduto.reduce((acc, i) => acc + (Number(i.pesoBruto) || 0), 0);
+                        const subtotalTara = linhasProduto.reduce((acc, i) => acc + (Number(i.tara) || 0), 0);
+                        const subtotalLiquido = linhasProduto.reduce((acc, i) => acc + (Number(i.pesoLiquido) || 0), 0);
+                        const subtotalNota = linhasProduto.reduce((acc, i) => acc + (Number(i.pesoNota) || 0), 0);
+
+                        dadosAba.push({
+                            'Nº Ticket': `📦 PRODUTO: ${produtoNome}`,
+                            'Data Entrada': '',
+                            'Data Saída': '',
+                            'Placa': '',
+                            'Motorista': '',
+                            'Produto': produtoNome,
+                            'Transportadora': '',
+                            'Peso Bruto (kg)': '',
+                            'Tara (kg)': '',
+                            'Peso Líquido (kg)': '',
+                            'Peso Nota (kg)': '',
+                            '⚖️ Dif. (kg)': '',
+                            '📈 Dif. (%)': '',
+                            'Observação': ''
+                        });
+
+                        linhasProduto.forEach(i => {
+                            dadosAba.push({
+                                'Nº Ticket': i.ticket,
+                                'Data Entrada': i.dataEntrada,
+                                'Data Saída': i.dataSaida,
+                                'Placa': i.placa,
+                                'Motorista': i.motorista,
+                                'Produto': i.produto,
+                                'Transportadora': i.transportadora,
+                                'Peso Bruto (kg)': i.pesoBruto,
+                                'Tara (kg)': i.tara,
+                                'Peso Líquido (kg)': i.pesoLiquido,
+                                'Peso Nota (kg)': i.pesoNota,
+                                '⚖️ Dif. (kg)': i.diferenca,
+                                '📈 Dif. (%)': i.percentual,
+                                'Observação': i.observacao
+                            });
+                        });
+
+                        dadosAba.push({
+                            'Nº Ticket': `Subtotal ${produtoNome}`,
+                            'Data Entrada': '',
+                            'Data Saída': '',
+                            'Placa': '',
+                            'Motorista': `${linhasProduto.length} viagens`,
+                            'Produto': produtoNome,
+                            'Transportadora': '',
+                            'Peso Bruto (kg)': subtotalBruto,
+                            'Tara (kg)': subtotalTara,
+                            'Peso Líquido (kg)': subtotalLiquido,
+                            'Peso Nota (kg)': subtotalNota > 0 ? subtotalNota : '',
+                            '⚖️ Dif. (kg)': subtotalNota > 0 ? (subtotalLiquido - subtotalNota) : '',
+                            '📈 Dif. (%)': subtotalNota > 0 ? (((subtotalLiquido - subtotalNota) / subtotalNota) * 100) : '',
+                            'Observação': ''
+                        });
+
+                        dadosAba.push({
+                            'Nº Ticket': '',
+                            'Data Entrada': '',
+                            'Data Saída': '',
+                            'Placa': '',
+                            'Motorista': '',
+                            'Produto': '',
+                            'Transportadora': '',
+                            'Peso Bruto (kg)': '',
+                            'Tara (kg)': '',
+                            'Peso Líquido (kg)': '',
+                            'Peso Nota (kg)': '',
+                            '⚖️ Dif. (kg)': '',
+                            '📈 Dif. (%)': '',
+                            'Observação': ''
+                        });
+                    });
+
+                    dadosAba.push({
+                        'Nº Ticket': '⭐ TOTAIS',
+                        'Data Entrada': '',
+                        'Data Saída': '',
+                        'Placa': '',
+                        'Motorista': `${linhasFornecedor.length} viagens`,
+                        'Produto': '',
+                        'Transportadora': '',
+                        'Peso Bruto (kg)': totalFornecedorBruto,
+                        'Tara (kg)': totalFornecedorTara,
+                        'Peso Líquido (kg)': totalFornecedorLiquido,
+                        'Peso Nota (kg)': totalFornecedorNota > 0 ? totalFornecedorNota : '',
+                        '⚖️ Dif. (kg)': totalFornecedorNota > 0 ? (totalFornecedorLiquido - totalFornecedorNota) : '',
+                        '📈 Dif. (%)': totalFornecedorNota > 0 ? (((totalFornecedorLiquido - totalFornecedorNota) / totalFornecedorNota) * 100) : '',
+                        'Observação': ''
+                    });
+
+                    const wsFornecedor = XLSX.utils.json_to_sheet(dadosAba);
+
+                    wsFornecedor['!cols'] = [
+                        { wch: 12 }, { wch: 18 }, { wch: 18 }, { wch: 12 }, { wch: 22 },
+                        { wch: 24 }, { wch: 28 }, { wch: 16 }, { wch: 14 }, { wch: 18 },
+                        { wch: 16 }, { wch: 14 }, { wch: 12 }, { wch: 45 }
+                    ];
+
+                    const range = XLSX.utils.decode_range(wsFornecedor['!ref']);
+                    for (let r = range.s.r + 1; r <= range.e.r; r++) {
+                        for (const c of [1, 2]) {
+                            const ref = XLSX.utils.encode_cell({ c, r });
+                            if (wsFornecedor[ref] && wsFornecedor[ref].v instanceof Date) {
+                                wsFornecedor[ref].t = 'd';
+                                wsFornecedor[ref].z = 'dd/mm/yyyy hh:mm';
+                            }
+                        }
+
+                        for (const c of [7, 8, 9, 10, 11]) {
+                            const ref = XLSX.utils.encode_cell({ c, r });
+                            if (wsFornecedor[ref] && wsFornecedor[ref].v !== '') {
+                                wsFornecedor[ref].t = 'n';
+                                wsFornecedor[ref].z = '#,##0';
+                            }
+                        }
+
+                        const percentualRef = XLSX.utils.encode_cell({ c: 12, r });
+                        if (wsFornecedor[percentualRef] && wsFornecedor[percentualRef].v !== '') {
+                            wsFornecedor[percentualRef].t = 'n';
+                            wsFornecedor[percentualRef].z = '0.00"%"';
+                        }
+                    }
+
+                    const nomeAbaFornecedor = normalizarNomeAba(fornecedor, idx, nomesAbasUsados);
+                    XLSX.utils.book_append_sheet(wb, wsFornecedor, nomeAbaFornecedor);
+                });
+
                 XLSX.writeFile(wb, nomeArquivo);
                 
-                this.showNotification('✅ Excel PROFISSIONAL exportado com sucesso!');
+                this.showNotification(`✅ Excel exportado com ${1 + fornecedores.length} aba(s)!`);
                 
-                // Registrar log
                 this.registrarLog('exportou_excel', `Exportou relatório Excel Profissional: ${titulo}`, {
                     nomeArquivo: nomeArquivo,
                     totalRegistros: pesagens.length,
-                    pesoTotal: totalPesoLiquido
+                    pesoTotal: totalPesoLiquido,
+                    abasFornecedores: fornecedores.length
                 });
             },
             exportarControleAgregado() {
