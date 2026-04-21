@@ -6366,7 +6366,6 @@
 
             exportarRelatorioExcel() {
                 const titulo = this.dom.relatorioTitulo.value.trim() || 'Relatório Geral de Pesagens';
-                const nomeArquivo = `${titulo.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_${new Date().getTime()}.xlsx`;
                 const pesagens = this.getFilteredPesagens();
                 const config = this.state.config;
                 
@@ -6374,6 +6373,34 @@
                     this.showNotification("⚠️ Nenhum dado para exportar.");
                     return;
                 }
+                
+                // Usar novo módulo profissional de exportação Excel
+                if (window.ExcelExporter) {
+                    const filtros = {
+                        dataInicio: this.dom.filtroDataInicio?.value,
+                        dataFim: this.dom.filtroDataFim?.value
+                    };
+                    
+                    const wb = ExcelExporter.createProfessionalWorkbook(titulo, config, pesagens, filtros);
+                    const nomeArquivo = `${titulo.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_${Date.now()}.xlsx`;
+                    
+                    if (ExcelExporter.exportToFile(wb, nomeArquivo)) {
+                        this.showNotification("✅ Relatório Excel profissional exportado com sucesso!");
+                        this.logAtividade('exportou_excel_profissional', `Exportou ${titulo} com ${pesagens.length} registros`);
+                    } else {
+                        throw new Error('Erro ao exportar Excel');
+                    }
+                } else {
+                    // Fallback para método antigo se módulo não estiver disponível
+                    this.exportarRelatorioExcelLegado();
+                }
+            },
+
+            exportarRelatorioExcelLegado() {
+                const titulo = this.dom.relatorioTitulo.value.trim() || 'Relatório Geral de Pesagens';
+                const nomeArquivo = `${titulo.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_legado_${new Date().getTime()}.xlsx`;
+                const pesagens = this.getFilteredPesagens();
+                const config = this.state.config;
                 
                 const totalPesoBruto = pesagens.reduce((acc, p) => acc + (Number(p.pesoBruto) || 0), 0);
                 const totalTara = pesagens.reduce((acc, p) => acc + (Number(p.tara) || 0), 0);
@@ -7197,8 +7224,40 @@
             },
 
             exportarRelatorioExcelMultiAbas() {
+                const titulo = this.dom.relatorioTitulo.value.trim() || 'Relatório Completo Multi-Abas';
+                const pesagens = this.getFilteredPesagens();
+                const config = this.state.config;
+
+                if (pesagens.length === 0) {
+                    this.showNotification("⚠️ Nenhum dado para exportar.");
+                    return;
+                }
+
+                // Usar novo módulo profissional de exportação Excel com múltiplas abas
+                if (window.ExcelExporter) {
+                    const filtros = {
+                        dataInicio: this.dom.filtroDataInicio?.value,
+                        dataFim: this.dom.filtroDataFim?.value
+                    };
+                    
+                    const wb = ExcelExporter.createProfessionalWorkbook(titulo, config, pesagens, filtros);
+                    const nomeArquivo = `${titulo.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_completo_${Date.now()}.xlsx`;
+                    
+                    if (ExcelExporter.exportToFile(wb, nomeArquivo)) {
+                        this.showNotification("✅ Relatório Excel multi-abas profissional exportado com sucesso!");
+                        this.logAtividade('exportou_excel_multiabas_profissional', `Exportou ${titulo} com ${pesagens.length} registros`);
+                    } else {
+                        throw new Error('Erro ao exportar Excel');
+                    }
+                } else {
+                    // Fallback para método antigo
+                    this.exportarRelatorioExcelMultiAbasLegado();
+                }
+            },
+
+            exportarRelatorioExcelMultiAbasLegado() {
                 const titulo = this.dom.relatorioTitulo.value.trim() || 'Relatório Completo';
-                const nomeArquivo = `${titulo.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_completo_${new Date().getTime()}.xlsx`;
+                const nomeArquivo = `${titulo.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_completo_legado_${new Date().getTime()}.xlsx`;
                 const pesagens = this.getFilteredPesagens();
                 const metrics = this.computeRelatorioMetrics(pesagens);
                 const config = this.state.config;
