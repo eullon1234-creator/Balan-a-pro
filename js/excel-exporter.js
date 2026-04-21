@@ -179,85 +179,158 @@ const ExcelExporter = {
     },
 
     /**
-     * Cria a aba de dados completos
+     * Cria a aba de dados completos - Relatório Padrão Melhorado
      */
     createDadosSheet(XLSX, titulo, config, pesagens, metrics, filtros) {
         const ws = XLSX.utils.aoa_to_sheet([]);
         let currentRow = 0;
 
-        // Cabeçalho principal
-        this.addCell(ws, 'A1', titulo, this.styles.headerTitle);
+        // ===== CABEÇALHO PRINCIPAL COM LOGOTIPO VISUAL =====
+        // Título principal com gradiente visual
+        this.addCell(ws, 'A1', '⚖️ ' + titulo, this.styles.headerTitle);
         this.mergeCells(ws, 'A1', 'S1');
         currentRow++;
 
-        // Empresa
-        this.addCell(ws, `A${currentRow + 1}`, config.nome || 'Empresa', this.styles.companyHeader);
+        // Empresa com destaque
+        const empresaNome = config.nome || 'Empresa';
+        const empresaCnpj = config.cnpj || '';
+        const empresaInfo = empresaCnpj ? `${empresaNome} - CNPJ: ${empresaCnpj}` : empresaNome;
+        this.addCell(ws, `A${currentRow + 1}`, empresaInfo, this.styles.companyHeader);
         this.mergeCells(ws, `A${currentRow + 1}`, `S${currentRow + 1}`);
         currentRow++;
 
-        // Período
+        // Informações do relatório
         const periodo = this.formatarPeriodo(filtros);
         this.addCell(ws, `A${currentRow + 1}`, periodo, {
             ...this.styles.dataCell,
             fill: { patternType: 'solid', fgColor: { rgb: this.colors.light } },
-            font: { name: 'Calibri', sz: 11, bold: true }
+            font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: this.colors.primary } }
         });
         this.mergeCells(ws, `A${currentRow + 1}`, `S${currentRow + 1}`);
         currentRow++;
 
-        // Data de geração
-        const dataGeracao = `Gerado em: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}`;
+        // Data e hora de geração com usuário
+        const usuarioLogado = localStorage.getItem('balancaUsuario') || 'Usuário';
+        const dataGeracao = `🕐 Gerado em: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')} | Usuário: ${usuarioLogado}`;
         this.addCell(ws, `A${currentRow + 1}`, dataGeracao, {
             ...this.styles.dataCell,
-            font: { name: 'Calibri', sz: 10, italic: true, color: { rgb: '6B7280' } }
+            fill: { patternType: 'solid', fgColor: { rgb: 'F1F5F9' } },
+            font: { name: 'Calibri', sz: 10, italic: true, color: { rgb: '64748B' } }
         });
         this.mergeCells(ws, `A${currentRow + 1}`, `S${currentRow + 1}`);
         currentRow += 2;
 
-        // Resumo rápido
-        this.addCell(ws, `A${currentRow + 1}`, '📊 RESUMO RÁPIDO', this.styles.sectionHeader);
+        // ===== RESUMO EXECUTIVO EM DESTAQUE =====
+        this.addCell(ws, `A${currentRow + 1}`, '📊 RESUMO EXECUTIVO', this.styles.sectionHeader);
         this.mergeCells(ws, `A${currentRow + 1}`, `H${currentRow + 1}`);
         currentRow++;
 
-        const resumoData = [
-            ['Total Pesagens:', metrics.totalPesagens, 'Peso Bruto Total:', metrics.totalBruto],
-            ['Peso Líquido Total:', metrics.totalLiquido, 'Tara Total:', metrics.totalTara],
-            ['Média/Ticket:', metrics.mediaLiquido, 'Maior Peso:', metrics.maxLiquido],
-            ['Conformidade:', `${metrics.conformidade.toFixed(1)}%`, 'Divergências:', metrics.divergencias]
+        // KPIs principais com formatação aprimorada
+        const kpisPrincipais = [
+            ['🎫 Total Pesagens', metrics.totalPesagens, '⚖️ Peso Bruto Total', `${metrics.totalBruto.toLocaleString('pt-BR', {minimumFractionDigits: 2})} kg`],
+            ['📦 Peso Líquido Total', `${metrics.totalLiquido.toLocaleString('pt-BR', {minimumFractionDigits: 2})} kg`, '🏋️ Tara Total', `${metrics.totalTara.toLocaleString('pt-BR', {minimumFractionDigits: 2})} kg`],
+            ['📈 Média por Ticket', `${metrics.mediaLiquido.toLocaleString('pt-BR', {minimumFractionDigits: 2})} kg`, '🏆 Maior Peso', `${metrics.maxLiquido.toLocaleString('pt-BR', {minimumFractionDigits: 2})} kg`],
+            ['✅ Taxa Conformidade', `${metrics.conformidade.toFixed(1)}%`, '⚠️ Divergências', metrics.divergencias]
         ];
 
-        resumoData.forEach(row => {
-            row.forEach((cell, idx) => {
-                const col = String.fromCharCode(65 + idx);
-                const style = idx % 2 === 0 
-                    ? { ...this.styles.dataCell, font: { ...this.styles.dataCell.font, bold: true } }
-                    : { ...this.styles.numericCell, font: { ...this.styles.numericCell.font, bold: true, color: { rgb: this.colors.secondary } } };
-                this.addCell(ws, `${col}${currentRow + 1}`, cell, style);
+        kpisPrincipais.forEach((row, rowIndex) => {
+            row.forEach((cell, colIdx) => {
+                const col = String.fromCharCode(65 + colIdx);
+                const isLabel = colIdx % 2 === 0;
+                const isPercentage = cell.includes('%');
+                const isWeight = cell.includes('kg');
+                
+                let style;
+                if (isLabel) {
+                    style = {
+                        ...this.styles.dataCell,
+                        font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: this.colors.dark } },
+                        fill: { patternType: 'solid', fgColor: { rgb: rowIndex % 2 === 0 ? 'F8FAFC' : 'F1F5F9' } }
+                    };
+                } else {
+                    style = {
+                        ...this.styles.numericCell,
+                        font: { 
+                            name: 'Calibri', 
+                            sz: 11, 
+                            bold: true, 
+                            color: { rgb: isPercentage ? (parseFloat(cell) >= 95 ? this.colors.success : this.colors.warning) : this.colors.primary }
+                        },
+                        fill: { patternType: 'solid', fgColor: { rgb: rowIndex % 2 === 0 ? 'FFFFFF' : 'FAFAFA' } }
+                    };
+                    if (isWeight || isPercentage) {
+                        style.numFmt = isPercentage ? '0.0"%"' : '#,##0.00" kg"';
+                    }
+                }
+                this.addCell(ws, `${col}${currentRow + 1}`, cell.replace(' kg', '').replace('%', ''), style);
             });
             currentRow++;
         });
 
         currentRow++;
 
-        // Dados principais
-        const headers = ['#', 'Ticket', 'Nota Fiscal', 'Entrada', 'Saída', 'Placa', 'Motorista', 'Cliente', 
-                        'Transportadora', 'Obra', 'Produto', 'Certificado', 'Bruto (kg)', 'Tara (kg)', 
-                        'Líquido (kg)', 'Nota (kg)', '⚖️ Dif.', '📈 %', 'Status', 'Observação'];
+        // ===== INDICADORES VISUAIS =====
+        // Barra de status visual
+        const statusConformidade = metrics.conformidade >= 95 ? '✅ EXCELENTE' : metrics.conformidade >= 85 ? '⚠️ ATENÇÃO' : '🔴 CRÍTICO';
+        const statusColor = metrics.conformidade >= 95 ? this.colors.success : metrics.conformidade >= 85 ? this.colors.warning : this.colors.danger;
+        
+        this.addCell(ws, `A${currentRow + 1}`, `📊 STATUS DA QUALIDADE: ${statusConformidade}`, {
+            font: { name: 'Calibri', sz: 12, bold: true, color: { rgb: 'FFFFFF' } },
+            alignment: { vertical: 'center', horizontal: 'center' },
+            fill: { patternType: 'solid', fgColor: { rgb: statusColor } },
+            border: { top: { style: 'medium' }, bottom: { style: 'medium' }, left: { style: 'medium' }, right: { style: 'medium' } }
+        });
+        this.mergeCells(ws, `A${currentRow + 1}`, `D${currentRow + 1}`);
+        
+        this.addCell(ws, `E${currentRow + 1}`, `📁 Registros: ${metrics.totalPesagens} | 📅 Período: ${filtros.dataInicio ? new Date(filtros.dataInicio).toLocaleDateString('pt-BR') : 'Todos'} a ${filtros.dataFim ? new Date(filtros.dataFim).toLocaleDateString('pt-BR') : 'Hoje'}`, {
+            font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: this.colors.dark } },
+            alignment: { vertical: 'center', horizontal: 'left' },
+            fill: { patternType: 'solid', fgColor: { rgb: 'E0F2FE' } }
+        });
+        this.mergeCells(ws, `E${currentRow + 1}`, `S${currentRow + 1}`);
+        currentRow += 2;
+
+        // ===== TABELA DE DADOS PRINCIPAIS =====
+        // Cabeçalho da tabela com ícones e formatação premium
+        const headers = [
+            '#', '🎫 Ticket', '📄 Nota Fiscal', '🕐 Entrada', '🚪 Saída', '🚛 Placa', 
+            '👤 Motorista', '🏭 Cliente', '🚚 Transportadora', '🏗️ Obra', '📦 Produto', 
+            '📋 Certificado', '⚖️ Bruto', '🪶 Tara', '💎 Líquido', '📝 Nota', 
+            '⚖️ Dif.', '📈 %', '✅ Status', '📌 Observação'
+        ];
         
         const dataStartRow = currentRow + 1;
         headers.forEach((header, idx) => {
             const col = String.fromCharCode(65 + idx);
-            this.addCell(ws, `${col}${dataStartRow}`, header, this.styles.columnHeader);
+            // Estilo de cabeçalho premium com gradiente
+            const headerStyle = {
+                font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: 'FFFFFF' } },
+                alignment: { vertical: 'center', horizontal: 'center', wrapText: true },
+                fill: { 
+                    patternType: 'gradient', 
+                    fgColor: { rgb: idx % 2 === 0 ? '1F4788' : '0D9488' },
+                    bgColor: { rgb: idx % 2 === 0 ? '0D9488' : '1F4788' }
+                },
+                border: { 
+                    top: { style: 'thin', color: { rgb: 'FFFFFF' } }, 
+                    bottom: { style: 'thin', color: { rgb: 'FFFFFF' } }, 
+                    left: { style: 'thin', color: { rgb: 'FFFFFF' } }, 
+                    right: { style: 'thin', color: { rgb: 'FFFFFF' } } 
+                }
+            };
+            this.addCell(ws, `${col}${dataStartRow}`, header, headerStyle);
         });
         currentRow++;
 
-        // Dados das pesagens
+        // Dados das pesagens com formatação aprimorada
         pesagens.forEach((p, index) => {
             const row = currentRow + 1;
             const isEven = index % 2 === 0;
+            // Zebra striping sofisticado
             const baseStyle = {
                 ...this.styles.dataCell,
-                fill: { patternType: 'solid', fgColor: { rgb: isEven ? this.colors.white : this.colors.light } }
+                fill: { patternType: 'solid', fgColor: { rgb: isEven ? 'FFFFFF' : 'F8FAFC' } },
+                font: { name: 'Calibri', sz: 10 }
             };
 
             const liquido = Number(p.pesoLiquido) || 0;
@@ -265,14 +338,18 @@ const ExcelExporter = {
             const diff = nota > 0 ? liquido - nota : null;
             const perc = nota > 0 ? ((diff / nota) * 100) : null;
             
+            // Determinar status com ícones mais visuais
             let status = '✅ OK';
             let statusStyle = baseStyle;
             if (nota > 0 && Math.abs(perc) > 5) {
-                status = '⚠️ Divergente';
+                status = '🔴 Divergente';
                 statusStyle = { ...baseStyle, ...this.styles.highlightRed };
             } else if (nota > 0 && Math.abs(perc) > 2) {
-                status = '⚡ Atenção';
+                status = '🟡 Atenção';
                 statusStyle = { ...baseStyle, ...this.styles.highlightYellow };
+            } else if (nota > 0 && Math.abs(perc) <= 2) {
+                status = '🟢 Dentro';
+                statusStyle = { ...baseStyle, ...this.styles.highlightGreen };
             }
 
             const rowData = [
@@ -302,16 +379,39 @@ const ExcelExporter = {
                 const col = String.fromCharCode(65 + colIdx);
                 let style = { ...baseStyle };
                 
+                // Colunas numéricas com formatação especial
                 if (colIdx >= 12 && colIdx <= 17) {
-                    style = { ...this.styles.numericCell, fill: baseStyle.fill };
+                    style = { 
+                        ...this.styles.numericCell, 
+                        fill: baseStyle.fill,
+                        font: { ...baseStyle.font, bold: colIdx === 14 } // Peso líquido em negrito
+                    };
+                    // Adicionar separador de milhar para pesos
+                    if (colIdx >= 12 && colIdx <= 16) {
+                        style.numFmt = '#,##0.00';
+                    } else if (colIdx === 17) {
+                        style.numFmt = '0.00';
+                    }
                 }
                 
+                // Coluna de status com destaque
                 if (colIdx === 18) {
-                    style = statusStyle;
+                    style = { 
+                        ...statusStyle, 
+                        alignment: { vertical: 'center', horizontal: 'center' },
+                        font: { ...statusStyle.font, bold: true, sz: 10 }
+                    };
                 }
 
+                // Formatação de data/hora
                 if (colIdx >= 3 && colIdx <= 4) {
                     style.numFmt = 'dd/mm/yyyy hh:mm';
+                }
+
+                // Primeira coluna (índice) centralizada
+                if (colIdx === 0) {
+                    style.alignment = { vertical: 'center', horizontal: 'center' };
+                    style.font.bold = true;
                 }
 
                 this.addCell(ws, `${col}${row}`, cell.v, style);
@@ -320,30 +420,48 @@ const ExcelExporter = {
             currentRow++;
         });
 
-        // Linha de totais
+        // Linha de totais premium
         const totalRow = currentRow + 1;
-        this.addCell(ws, `A${totalRow}`, '⭐ TOTAIS', this.styles.totalRow);
+        this.addCell(ws, `A${totalRow}`, '⭐ TOTAIS GERAIS', {
+            ...this.styles.totalRow,
+            font: { name: 'Calibri', sz: 12, bold: true, color: { rgb: 'FFFFFF' } },
+            fill: { patternType: 'solid', fgColor: { rgb: '0D9488' } }
+        });
         this.mergeCells(ws, `A${totalRow}`, `C${totalRow}`);
         
         const lastDataRow = totalRow - 1;
+        // Adicionar fórmulas Excel nativas para totais com formatação aprimorada
         ['M', 'N', 'O', 'P'].forEach((col, idx) => {
             const formula = `SUM(${col}${dataStartRow + 1}:${col}${lastDataRow})`;
             this.addCell(ws, `${col}${totalRow}`, { f: formula }, {
-                ...this.styles.totalRow,
+                font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
+                alignment: { vertical: 'center', horizontal: 'right' },
+                fill: { patternType: 'solid', fgColor: { rgb: idx % 2 === 0 ? '1F4788' : '0D9488' } },
                 numFmt: '#,##0.00',
-                alignment: { vertical: 'center', horizontal: 'right' }
+                border: { top: { style: 'thick', color: { rgb: 'FFFFFF' } }, bottom: { style: 'thick', color: { rgb: 'FFFFFF' } }, left: { style: 'thin' }, right: { style: 'thin' } }
             });
         });
 
-        // Configurações da planilha
+        // ===== RODAPÉ COM INFORMAÇÕES ADICIONAIS =====
+        currentRow += 2;
+        this.addCell(ws, `A${currentRow + 1}`, `📄 Relatório gerado automaticamente por Balança Pro+ | Total de Registros: ${pesagens.length}`, {
+            font: { name: 'Calibri', sz: 9, italic: true, color: { rgb: '94A3B8' } },
+            alignment: { vertical: 'center', horizontal: 'left' }
+        });
+        this.mergeCells(ws, `A${currentRow + 1}`, `S${currentRow + 1}`);
+
+        // Configurações da planilha com larguras otimizadas
         ws['!cols'] = [
-            { wch: 5 }, { wch: 12 }, { wch: 15 }, { wch: 18 }, { wch: 18 }, { wch: 12 },
-            { wch: 25 }, { wch: 28 }, { wch: 25 }, { wch: 20 }, { wch: 22 }, { wch: 15 },
-            { wch: 14 }, { wch: 12 }, { wch: 14 }, { wch: 12 }, { wch: 12 }, { wch: 10 },
-            { wch: 12 }, { wch: 40 }
+            { wch: 6 }, { wch: 14 }, { wch: 16 }, { wch: 19 }, { wch: 19 }, { wch: 14 },
+            { wch: 26 }, { wch: 30 }, { wch: 26 }, { wch: 22 }, { wch: 24 }, { wch: 16 },
+            { wch: 15 }, { wch: 13 }, { wch: 15 }, { wch: 13 }, { wch: 13 }, { wch: 11 },
+            { wch: 14 }, { wch: 45 }
         ];
 
+        // Auto-filtro na tabela principal
         ws['!autofilter'] = { ref: `A${dataStartRow}:T${totalRow}` };
+        
+        // Congelar painéis (cabeçalho fixo)
         ws['!freeze'] = { xSplit: 0, ySplit: dataStartRow, topLeftCell: `A${dataStartRow + 1}`, state: 'frozen' };
 
         return ws;
