@@ -4426,13 +4426,20 @@
                 const divergencias = this.detectarDivergencias(pesagensFiltradas);
                 const metrics = this.computeRelatorioMetrics(pesagensFiltradas);
 
-                this.dom.tabelaRelatorios.innerHTML = itemsParaPagina.length > 0 ? itemsParaPagina.map(p => `
-                    <tr class="border-b border-gray-200 hover:bg-gray-50">
-                        <td class="p-3">${p.num}</td><td class="p-3">${new Date(p.dataEntrada.seconds * 1000).toLocaleDateString('pt-BR')}</td>
-                        <td class="p-3">${p.placa}</td><td class="p-3 text-gray-500">${this.formatarNotasFiscais(p.notaFiscal, p.notaFiscal2)}</td><td class="p-3">${p.cliente || 'N/A'}</td>
-                        <td class="p-3">${p.transportadora || 'N/A'}</td><td class="p-3">${p.obra || 'N/A'}</td><td class="p-3">${p.produto}</td>
-                        <td class="p-3 text-gray-500">${p.certificado || 'N/A'}</td><td class="p-3 text-right font-semibold">${this.formatarPeso(p.pesoLiquido)} kg</td>
-                    </tr>`).join('') : '<tr><td colspan="10" class="p-4 text-center text-gray-500">Nenhum registo encontrado.</td></tr>';
+                // Tabela responsiva com classes condicionais para mobile
+                this.dom.tabelaRelatorios.innerHTML = itemsParaPagina.length > 0 ? itemsParaPagina.map((p, idx) => `
+                    <tr class="border-b border-gray-100 hover:bg-blue-50 transition-colors ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}">
+                        <td class="p-3 whitespace-nowrap font-medium text-gray-900">${p.num}</td>
+                        <td class="p-3 whitespace-nowrap">${new Date(p.dataEntrada.seconds * 1000).toLocaleDateString('pt-BR')}</td>
+                        <td class="p-3 whitespace-nowrap font-semibold text-gray-700">${p.placa}</td>
+                        <td class="p-3 whitespace-nowrap text-gray-600">${this.formatarNotasFiscais(p.notaFiscal, p.notaFiscal2)}</td>
+                        <td class="p-3 whitespace-nowrap hidden md:table-cell">${p.cliente || 'N/A'}</td>
+                        <td class="p-3 whitespace-nowrap hidden lg:table-cell">${p.transportadora || 'N/A'}</td>
+                        <td class="p-3 whitespace-nowrap hidden xl:table-cell">${p.obra || 'N/A'}</td>
+                        <td class="p-3 whitespace-nowrap font-medium text-gray-800">${p.produto}</td>
+                        <td class="p-3 whitespace-nowrap text-gray-500 hidden sm:table-cell">${p.certificado || 'N/A'}</td>
+                        <td class="p-3 whitespace-nowrap text-right font-bold text-teal-600">${this.formatarPeso(p.pesoLiquido)} kg</td>
+                    </tr>`).join('') : '<tr><td colspan="10" class="p-4 text-center text-gray-500">📭 Nenhum registo encontrado.</td></tr>';
                 
                 if (pesagensFiltradas.length > 0) {
                     this.dom.relatorioTotalLiquido.textContent = `${this.formatarPeso(metrics.totalLiquido)} kg`;
@@ -4514,19 +4521,25 @@
                 if (!metrics) metrics = this.computeRelatorioMetrics(pesagens);
 
                 if (!pesagens.length) {
-                    this.dom.relatorioTransportadoraBody.innerHTML = '<tr><td colspan="4" class="p-3 text-center text-gray-500">Sem dados para exibir.</td></tr>';
+                    this.dom.relatorioTransportadoraBody.innerHTML = '<tr><td colspan="4" class="p-3 text-center text-gray-500">📭 Sem dados para exibir.</td></tr>';
                     this.dom.relatorioAgrupamentos.classList.add('hidden');
                     return;
                 }
 
                 const rows = Object.entries(metrics.transportadoras)
                     .sort(([, a], [, b]) => b.pesoLiquido - a.pesoLiquido)
-                    .map(([nome, valores]) => {
+                    .map(([nome, valores], idx) => {
                         const displayNome = nome === 'Sem Transportadora' ? 'Sem transportadora' : nome;
-                        return `<tr class="border-b border-gray-200 last:border-b-0"><td class="p-3">${displayNome}</td><td class="p-3 text-right">${valores.viagens}</td><td class="p-3 text-right">${this.formatarPeso(valores.pesoLiquido)} kg</td><td class="p-3 text-right">${this.formatarPeso(valores.pesoBruto)} kg</td></tr>`;
+                        const bgClass = idx % 2 === 0 ? 'bg-white' : 'bg-gray-50';
+                        return `<tr class="border-b border-gray-100 last:border-b-0 hover:bg-blue-50 transition-colors ${bgClass}">
+                            <td class="p-3 whitespace-nowrap font-medium text-gray-800">${displayNome}</td>
+                            <td class="p-3 whitespace-nowrap text-right font-semibold text-gray-700">${valores.viagens}</td>
+                            <td class="p-3 whitespace-nowrap text-right font-bold text-teal-600">${this.formatarPeso(valores.pesoLiquido)} kg</td>
+                            <td class="p-3 whitespace-nowrap text-right text-gray-600 hidden sm:table-cell">${this.formatarPeso(valores.pesoBruto)} kg</td>
+                        </tr>`;
                     }).join('');
 
-                this.dom.relatorioTransportadoraBody.innerHTML = rows || '<tr><td colspan="4" class="p-3 text-center text-gray-500">Sem dados para exibir.</td></tr>';
+                this.dom.relatorioTransportadoraBody.innerHTML = rows || '<tr><td colspan="4" class="p-3 text-center text-gray-500">📭 Sem dados para exibir.</td></tr>';
                 this.dom.relatorioAgrupamentos.classList.remove('hidden');
             },
             getFilteredTickets() {
