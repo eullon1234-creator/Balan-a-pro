@@ -1,5 +1,12 @@
 ﻿        // Verificar carregamento de bibliotecas externas
         window.addEventListener('DOMContentLoaded', () => {
+            // Exibir versão do app (fonte única: window.APP_VERSION definido em index.html)
+            const versao = window.APP_VERSION || 'dev';
+            document.querySelectorAll('#app-version-auth, #app-version-header').forEach(el => {
+                el.textContent = versao;
+            });
+            console.log(`🚀 Balança Pro+ ${versao}`);
+
             const bibliotecas = {
                 'jsPDF': typeof window.jspdf !== 'undefined',
                 'Chart.js': typeof Chart !== 'undefined',
@@ -2350,6 +2357,201 @@
                 return `há ${dias} dia${dias > 1 ? 's' : ''}`;
             },
 
+            // ==================== HELPERS DE ESTILO EXCEL (xlsx-js-style) ====================
+            // Paleta padrão do app
+            _excelTheme: {
+                headerBg:    '0D9488', // Verde teal (brand)
+                headerFg:    'FFFFFF',
+                titleBg:     '1F4788', // Azul escuro (títulos)
+                titleFg:     'FFFFFF',
+                sectionBg:   'D9E1F2', // Azul claro (subtítulos/seções)
+                zebraLight:  'FFFFFF',
+                zebraDark:   'F2F7F6',
+                totalBg:     '1F4788',
+                totalFg:     'FFFFFF',
+                borderColor: 'D9D9D9'
+            },
+
+            /**
+             * Aplica estilo padrão do app a uma planilha gerada via json_to_sheet ou similar.
+             * @param {object} ws - worksheet XLSX
+             * @param {object} [opts]
+             * @param {number} [opts.headerRow=0] - linha do cabeçalho (0-indexado)
+             * @param {number} [opts.firstDataRow=headerRow+1] - primeira linha de dados
+             * @param {number[]} [opts.numericCols=[]] - índices de colunas numéricas (para formato #,##0)
+             * @param {number[]} [opts.percentCols=[]] - índices de colunas de percentual
+             * @param {number[]} [opts.dateCols=[]] - índices de colunas de data
+             * @param {boolean} [opts.zebra=true] - listras alternadas
+             * @param {boolean} [opts.freeze=true] - congelar cabeçalho
+             * @param {boolean} [opts.autofilter=true] - ativar autofilter
+             * @param {number[]} [opts.colWidths] - larguras (wch) das colunas
+             * @param {boolean} [opts.hasTotalRow=false] - se a última linha é um total
+             */
+            _aplicarEstiloPlanilha(ws, opts = {}) {
+                if (!ws || !ws['!ref']) return;
+                const theme = this._excelTheme;
+                const {
+                    headerRow = 0,
+                    firstDataRow = headerRow + 1,
+                    numericCols = [],
+                    percentCols = [],
+                    dateCols = [],
+                    zebra = true,
+                    freeze = true,
+                    autofilter = true,
+                    colWidths,
+                    hasTotalRow = false
+                } = opts;
+
+                const range = XLSX.utils.decode_range(ws['!ref']);
+                const thinBorder = {
+                    top:    { style: 'thin', color: { rgb: theme.borderColor } },
+                    bottom: { style: 'thin', color: { rgb: theme.borderColor } },
+                    left:   { style: 'thin', color: { rgb: theme.borderColor } },
+                    right:  { style: 'thin', color: { rgb: theme.borderColor } }
+                };
+
+                // Estilo do cabeçalho
+                for (let c = range.s.c; c <= range.e.c; c++) {
+                    const ref = XLSX.utils.encode_cell({ r: headerRow, c });
+                    if (!ws[ref]) continue;
+                    ws[ref].s = {
+                        font:      { name: 'Calibri', sz: 11, bold: true, color: { rgb: theme.headerFg } },
+                        fill:      { patternType: 'solid', fgColor: { rgb: theme.headerBg } },
+                        alignment: { vertical: 'center', horizontal: 'center', wrapText: true },
+                        border: {
+                            top:    { style: 'medium', color: { rgb: '000000' } },
+                            bottom: { style: 'medium', color: { rgb: '000000' } },
+                            left:   { style: 'thin', color: { rgb: 'FFFFFF' } },
+                            right:  { style: 'thin', color: { rgb: 'FFFFFF' } }
+                        }
+                    };
+                }
+
+                // Estilo das linhas de dados
+                const dataEndRow = hasTotalRow ? range.e.r - 1 : range.e.r;
+                for (let r = firstDataRow; r <= dataEndRow; r++) {
+                    const idxLinha = r - firstDataRow;
+                    const fill = zebra && (idxLinha % 2 === 1)
+                        ? { patternType: 'solid', fgColor: { rgb: theme.zebraDark } }
+                        : { patternType: 'solid', fgColor: { rgb: theme.zebraLight } };
+
+                    for (let c = range.s.c; c <= range.e.c; c++) {
+                        const ref = XLSX.utils.encode_cell({ r, c });
+                        if (!ws[ref]) continue;
+
+                        const alinhamento = numericCols.includes(c) || percentCols.includes(c)
+                            ? 'right'
+                            : (dateCols.includes(c) ? 'center' : 'left');
+
+                        const cellStyle = {
+                            font:      { name: 'Calibri', sz: 10 },
+                            fill,
+                            alignment: { vertical: 'center', horizontal: alinhamento, wrapText: false },
+                            border:    thinBorder
+                        };
+
+                        if (numericCols.includes(c)) {
+                            cellStyle.numFmt = '#,##0';
+                            if (ws[ref].t !== 'n' && typeof ws[ref].v === 'number') ws[ref].t = 'n';
+                        }
+                        if (percentCols.includes(c)) {
+                            cellStyle.numFmt = '0.00"%"';
+                        }
+                        if (dateCols.includes(c)) {
+                            cellStyle.numFmt = 'dd/mm/yyyy hh:mm';
+                        }
+
+                        ws[ref].s = cellStyle;
+                    }
+                }
+
+                // Estilo da linha de total (se houver)
+                if (hasTotalRow) {
+                    const totalR = range.e.r;
+                    for (let c = range.s.c; c <= range.e.c; c++) {
+                        const ref = XLSX.utils.encode_cell({ r: totalR, c });
+                        if (!ws[ref]) continue;
+                        const totalStyle = {
+                            font:      { name: 'Calibri', sz: 11, bold: true, color: { rgb: theme.totalFg } },
+                            fill:      { patternType: 'solid', fgColor: { rgb: theme.totalBg } },
+                            alignment: { vertical: 'center', horizontal: numericCols.includes(c) || percentCols.includes(c) ? 'right' : 'center' },
+                            border: {
+                                top:    { style: 'medium', color: { rgb: '000000' } },
+                                bottom: { style: 'medium', color: { rgb: '000000' } },
+                                left:   { style: 'thin', color: { rgb: 'FFFFFF' } },
+                                right:  { style: 'thin', color: { rgb: 'FFFFFF' } }
+                            }
+                        };
+                        if (numericCols.includes(c)) totalStyle.numFmt = '#,##0';
+                        if (percentCols.includes(c)) totalStyle.numFmt = '0.00"%"';
+                        if (dateCols.includes(c)) totalStyle.numFmt = 'dd/mm/yyyy hh:mm';
+                        ws[ref].s = totalStyle;
+                    }
+                }
+
+                // Larguras de coluna
+                if (Array.isArray(colWidths) && colWidths.length) {
+                    ws['!cols'] = colWidths.map(w => (typeof w === 'number' ? { wch: w } : w));
+                } else if (!ws['!cols']) {
+                    const autoCols = [];
+                    for (let c = range.s.c; c <= range.e.c; c++) {
+                        let max = 10;
+                        for (let r = headerRow; r <= range.e.r; r++) {
+                            const ref = XLSX.utils.encode_cell({ r, c });
+                            const val = ws[ref] && ws[ref].v != null ? String(ws[ref].v) : '';
+                            if (val.length > max) max = Math.min(val.length + 2, 45);
+                        }
+                        autoCols.push({ wch: max });
+                    }
+                    ws['!cols'] = autoCols;
+                }
+
+                // Autofilter + freeze no cabeçalho
+                if (autofilter) {
+                    const firstRef = XLSX.utils.encode_cell({ r: headerRow, c: range.s.c });
+                    const lastRef  = XLSX.utils.encode_cell({ r: dataEndRow, c: range.e.c });
+                    ws['!autofilter'] = { ref: `${firstRef}:${lastRef}` };
+                }
+                if (freeze) {
+                    const topLeft = XLSX.utils.encode_cell({ r: firstDataRow, c: 0 });
+                    ws['!freeze'] = { xSplit: 0, ySplit: firstDataRow, topLeftCell: topLeft, state: 'frozen' };
+                }
+            },
+
+            /** Aplica estilo a uma célula de título (faixa azul escura) */
+            _estiloTituloFaixa(size = 14) {
+                return {
+                    font:      { name: 'Calibri', sz: size, bold: true, color: { rgb: this._excelTheme.titleFg } },
+                    fill:      { patternType: 'solid', fgColor: { rgb: this._excelTheme.titleBg } },
+                    alignment: { vertical: 'center', horizontal: 'center' },
+                    border: {
+                        top:    { style: 'medium', color: { rgb: '000000' } },
+                        bottom: { style: 'medium', color: { rgb: '000000' } },
+                        left:   { style: 'medium', color: { rgb: '000000' } },
+                        right:  { style: 'medium', color: { rgb: '000000' } }
+                    }
+                };
+            },
+
+            /** Aplica estilo a uma célula de seção (faixa clara) */
+            _estiloSecao() {
+                return {
+                    font:      { name: 'Calibri', sz: 12, bold: true, color: { rgb: '1F4788' } },
+                    fill:      { patternType: 'solid', fgColor: { rgb: this._excelTheme.sectionBg } },
+                    alignment: { vertical: 'center', horizontal: 'left' }
+                };
+            },
+
+            /** Aplica estilo a célula de subtítulo/info (cinza claro, itálico) */
+            _estiloInfo() {
+                return {
+                    font:      { name: 'Calibri', sz: 10, italic: true, color: { rgb: '555555' } },
+                    fill:      { patternType: 'solid', fgColor: { rgb: 'F2F2F2' } },
+                    alignment: { vertical: 'center', horizontal: 'left' }
+                };
+            },
+
             async exportarLogsExcel() {
                 if (this.state.userRole !== 'dono') return;
                 
@@ -2368,12 +2570,21 @@
                             'Descrição': log.descricao
                         });
                     });
-                    
+
+                    if (logs.length === 0) {
+                        this.showNotification("⚠️ Nenhum log para exportar.");
+                        return;
+                    }
+
                     const ws = XLSX.utils.json_to_sheet(logs);
+                    this._aplicarEstiloPlanilha(ws, {
+                        colWidths: [22, 28, 32, 14, 20, 55]
+                    });
+
                     const wb = XLSX.utils.book_new();
                     XLSX.utils.book_append_sheet(wb, ws, "Logs de Atividades");
                     XLSX.writeFile(wb, `logs_atividades_${new Date().toISOString().split('T')[0]}.xlsx`);
-                    
+
                     this.showNotification("✅ Logs exportados com sucesso!");
                 } catch (error) {
                     console.error("❌ Erro ao exportar logs:", error);
@@ -6981,16 +7192,23 @@
                 if (dados.length === 0) { this.showNotification("⚠️ Nenhum dado para exportar."); return; }
 
                 const ws = XLSX.utils.json_to_sheet(dados);
-                
+
+                this._aplicarEstiloPlanilha(ws, {
+                    dateCols:    [0, 8],      // Data Entrada, Data Fiscal
+                    numericCols: [9, 10, 11, 12], // Quantidades e valores
+                    colWidths:   [14, 28, 28, 28, 20, 26, 16, 16, 14, 18, 18, 16, 16, 18, 18]
+                });
+
+                // Formato específico para as colunas de quantidade (com 3 casas decimais)
                 const range = XLSX.utils.decode_range(ws['!ref']);
                 for (let R = range.s.r + 1; R <= range.e.r; ++R) {
-                    for(let C of [0, 7]) { // Data Entrada, Data Fiscal
-                        const cell_ref = XLSX.utils.encode_cell({c:C, r:R});
-                        if (ws[cell_ref]) { ws[cell_ref].z = 'dd/mm/yyyy'; }
+                    for (const C of [9, 10]) {
+                        const ref = XLSX.utils.encode_cell({ c: C, r: R });
+                        if (ws[ref] && ws[ref].s) { ws[ref].s.numFmt = '#,##0.000'; }
                     }
-                    for(let C of [8, 9]) { // Quantidades
-                        const cell_ref = XLSX.utils.encode_cell({c:C, r:R});
-                        if (ws[cell_ref]) { ws[cell_ref].t = 'n'; ws[cell_ref].z = '#,##0.000'; }
+                    for (const C of [0, 8]) {
+                        const ref = XLSX.utils.encode_cell({ c: C, r: R });
+                        if (ws[ref] && ws[ref].s) { ws[ref].s.numFmt = 'dd/mm/yyyy'; }
                     }
                 }
 
@@ -7126,6 +7344,25 @@
                 }));
 
                 const ws = XLSX.utils.json_to_sheet(dados);
+
+                this._aplicarEstiloPlanilha(ws, {
+                    numericCols: [5, 6, 7],   // Peso Nota, Peso Líquido, Diferença
+                    colWidths:   [12, 14, 14, 18, 28, 18, 20, 18, 18]
+                });
+
+                // Destacar linhas com diferença negativa em vermelho
+                const range = XLSX.utils.decode_range(ws['!ref']);
+                for (let R = 1; R <= range.e.r; R++) {
+                    const difRef = XLSX.utils.encode_cell({ c: 7, r: R });
+                    if (ws[difRef] && typeof ws[difRef].v === 'number' && ws[difRef].v < 0) {
+                        ws[difRef].s = {
+                            ...ws[difRef].s,
+                            font: { ...(ws[difRef].s?.font || {}), bold: true, color: { rgb: '9C0006' } },
+                            fill: { patternType: 'solid', fgColor: { rgb: 'FFC7CE' } }
+                        };
+                    }
+                }
+
                 const wb = XLSX.utils.book_new();
                 XLSX.utils.book_append_sheet(wb, ws, "Divergências");
                 XLSX.writeFile(wb, `divergencias_${new Date().toISOString().slice(0,10)}.xlsx`);
@@ -7147,7 +7384,7 @@
 
                 const wb = XLSX.utils.book_new();
 
-                // Função helper para criar cabeçalho padrão
+                // Função helper para criar cabeçalho padrão (com estilos aplicados)
                 const criarCabecalho = (ws, tituloAba, currentRow = 0) => {
                     XLSX.utils.sheet_add_aoa(ws, [[titulo]], { origin: 'A1' });
                     currentRow++;
@@ -7167,7 +7404,92 @@
                     currentRow++; // Linha em branco
                     XLSX.utils.sheet_add_aoa(ws, [[tituloAba]], { origin: `A${currentRow + 1}` });
                     currentRow++;
+
+                    // Aplicar estilos nas linhas de cabeçalho
+                    if (ws['A1']) ws['A1'].s = this._estiloTituloFaixa(18);
+                    if (ws['A2']) ws['A2'].s = {
+                        font: { name: 'Calibri', sz: 14, bold: true, color: { rgb: '1F4788' } },
+                        fill: { patternType: 'solid', fgColor: { rgb: 'D9E1F2' } },
+                        alignment: { vertical: 'center', horizontal: 'center' }
+                    };
+                    if (ws['A3']) ws['A3'].s = this._estiloInfo();
+                    if (ws['A4']) ws['A4'].s = this._estiloInfo();
+                    const refAba = `A${currentRow}`;
+                    if (ws[refAba]) ws[refAba].s = this._estiloTituloFaixa(14);
+
                     return currentRow + 1; // Retorna a linha onde os dados começam
+                };
+
+                // Helper para estilizar uma linha específica como cabeçalho de tabela
+                const estilizarLinhaCabecalho = (ws, row, colStart, colEnd) => {
+                    for (let c = colStart; c <= colEnd; c++) {
+                        const ref = XLSX.utils.encode_cell({ r: row, c });
+                        if (!ws[ref]) continue;
+                        ws[ref].s = {
+                            font:      { name: 'Calibri', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
+                            fill:      { patternType: 'solid', fgColor: { rgb: '0D9488' } },
+                            alignment: { vertical: 'center', horizontal: 'center', wrapText: true },
+                            border: {
+                                top:    { style: 'medium', color: { rgb: '000000' } },
+                                bottom: { style: 'medium', color: { rgb: '000000' } },
+                                left:   { style: 'thin', color: { rgb: 'FFFFFF' } },
+                                right:  { style: 'thin', color: { rgb: 'FFFFFF' } }
+                            }
+                        };
+                    }
+                };
+
+                // Helper para estilizar linhas de dados (com zebra)
+                const estilizarLinhasDados = (ws, rowStart, rowEnd, colStart, colEnd, { totalNaUltima = false } = {}) => {
+                    const theme = this._excelTheme;
+                    const thinBorder = {
+                        top:    { style: 'thin', color: { rgb: theme.borderColor } },
+                        bottom: { style: 'thin', color: { rgb: theme.borderColor } },
+                        left:   { style: 'thin', color: { rgb: theme.borderColor } },
+                        right:  { style: 'thin', color: { rgb: theme.borderColor } }
+                    };
+                    const dataEnd = totalNaUltima ? rowEnd - 1 : rowEnd;
+                    for (let r = rowStart; r <= dataEnd; r++) {
+                        const zebra = (r - rowStart) % 2 === 1
+                            ? { patternType: 'solid', fgColor: { rgb: theme.zebraDark } }
+                            : { patternType: 'solid', fgColor: { rgb: theme.zebraLight } };
+                        for (let c = colStart; c <= colEnd; c++) {
+                            const ref = XLSX.utils.encode_cell({ r, c });
+                            if (!ws[ref]) continue;
+                            const eNum = ws[ref].t === 'n' || typeof ws[ref].v === 'number';
+                            ws[ref].s = {
+                                font:      { name: 'Calibri', sz: 10 },
+                                fill:      zebra,
+                                alignment: { vertical: 'center', horizontal: eNum ? 'right' : 'left' },
+                                border:    thinBorder
+                            };
+                            if (eNum) ws[ref].s.numFmt = '#,##0';
+                        }
+                    }
+                    if (totalNaUltima) {
+                        for (let c = colStart; c <= colEnd; c++) {
+                            const ref = XLSX.utils.encode_cell({ r: rowEnd, c });
+                            if (!ws[ref]) continue;
+                            const eNum = ws[ref].t === 'n' || typeof ws[ref].v === 'number';
+                            ws[ref].s = {
+                                font:      { name: 'Calibri', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
+                                fill:      { patternType: 'solid', fgColor: { rgb: '1F4788' } },
+                                alignment: { vertical: 'center', horizontal: eNum ? 'right' : 'center' },
+                                border: {
+                                    top:    { style: 'medium', color: { rgb: '000000' } },
+                                    bottom: { style: 'medium', color: { rgb: '000000' } },
+                                    left:   { style: 'thin', color: { rgb: 'FFFFFF' } },
+                                    right:  { style: 'thin', color: { rgb: 'FFFFFF' } }
+                                }
+                            };
+                            if (eNum) ws[ref].s.numFmt = '#,##0';
+                        }
+                    }
+                };
+
+                // Helper para estilizar células de seção (ex.: "ESTATÍSTICAS GERAIS")
+                const estilizarSecao = (ws, ref) => {
+                    if (ws[ref]) ws[ref].s = this._estiloSecao();
                 };
 
                 // ===== ABA 1: DADOS COMPLETOS =====
@@ -7239,6 +7561,9 @@
                 if (!ws1['!merges']) ws1['!merges'] = [];
                 ws1['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 5 } });
                 ws1['!ref'] = `A1:R${dataRow1 + dadosCompletos.length - 1}`;
+                // Estilos: cabeçalho da tabela + linhas + total
+                estilizarLinhaCabecalho(ws1, dataRow1 - 1, 0, 17);
+                estilizarLinhasDados(ws1, dataRow1, dataRow1 + dadosCompletos.length - 1, 0, 17, { totalNaUltima: true });
                 XLSX.utils.book_append_sheet(wb, ws1, "Dados Completos");
 
                 // ===== ABA 2: RESUMO POR TRANSPORTADORA =====
@@ -7335,6 +7660,11 @@
                 ws2['!merges'].push({ s: { r: dataRow2, c: 0 }, e: { r: dataRow2, c: 5 } }); // Estatísticas
                 ws2['!merges'].push({ s: { r: dataRow2 + 5, c: 0 }, e: { r: dataRow2 + 5, c: 5 } }); // Detalhamento
                 ws2['!ref'] = `A1:L${dataRow2 + 8 + transportadorasData.length - 1}`;
+                // Estilos: seções, cabeçalho da tabela e linhas
+                estilizarSecao(ws2, `A${dataRow2}`);
+                estilizarSecao(ws2, `A${dataRow2 + 5}`);
+                estilizarLinhaCabecalho(ws2, dataRow2 + 6, 0, 11);
+                estilizarLinhasDados(ws2, dataRow2 + 7, dataRow2 + 7 + transportadorasData.length - 1, 0, 11, { totalNaUltima: true });
                 XLSX.utils.book_append_sheet(wb, ws2, "Por Transportadora");
 
                 // ===== ABA 3: RESUMO POR PRODUTO =====
@@ -7434,6 +7764,11 @@
                 ws3['!merges'].push({ s: { r: dataRow3, c: 0 }, e: { r: dataRow3, c: 5 } }); // Estatísticas
                 ws3['!merges'].push({ s: { r: dataRow3 + 5, c: 0 }, e: { r: dataRow3 + 5, c: 5 } }); // Detalhamento
                 ws3['!ref'] = `A1:M${dataRow3 + 8 + produtosSheet.length - 1}`;
+                // Estilos: seções, cabeçalho da tabela e linhas
+                estilizarSecao(ws3, `A${dataRow3}`);
+                estilizarSecao(ws3, `A${dataRow3 + 5}`);
+                estilizarLinhaCabecalho(ws3, dataRow3 + 6, 0, 12);
+                estilizarLinhasDados(ws3, dataRow3 + 7, dataRow3 + 7 + produtosSheet.length - 1, 0, 12, { totalNaUltima: true });
                 XLSX.utils.book_append_sheet(wb, ws3, "Por Produto");
 
                 // ===== ABA 4: RESUMO DIÁRIO =====
@@ -7537,6 +7872,16 @@
                 ws4['!merges'].push({ s: { r: dataRow4, c: 0 }, e: { r: dataRow4, c: 5 } }); // Estatísticas
                 ws4['!merges'].push({ s: { r: dataRow4 + 5, c: 0 }, e: { r: dataRow4 + 5, c: 5 } }); // Timeline
                 ws4['!ref'] = `A1:N${dataRow4 + 8 + diarioSheet.length - 1}`;
+                // Estilos: seções, cabeçalho da tabela e linhas
+                estilizarSecao(ws4, `A${dataRow4}`);
+                estilizarSecao(ws4, `A${dataRow4 + 5}`);
+                estilizarLinhaCabecalho(ws4, dataRow4 + 6, 0, 13);
+                estilizarLinhasDados(ws4, dataRow4 + 7, dataRow4 + 7 + diarioSheet.length - 1, 0, 13, { totalNaUltima: true });
+                // Ajustar formato da coluna Data (coluna 0) na aba diária
+                for (let r = dataRow4 + 7; r < dataRow4 + 7 + diarioSheet.length - 1; r++) {
+                    const ref = XLSX.utils.encode_cell({ r, c: 0 });
+                    if (ws4[ref] && ws4[ref].s) ws4[ref].s.numFmt = 'dd/mm/yyyy';
+                }
                 XLSX.utils.book_append_sheet(wb, ws4, "Resumo Diário");
 
                 // ===== ABA 5: TOP 10 MOTORISTAS =====
@@ -7573,6 +7918,9 @@
                 if (!ws5['!merges']) ws5['!merges'] = [];
                 ws5['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 3 } });
                 ws5['!ref'] = `A1:F${dataRow5 + top10Motoristas.length - 1}`;
+                // Estilos
+                estilizarLinhaCabecalho(ws5, dataRow5 - 1, 0, 5);
+                estilizarLinhasDados(ws5, dataRow5, dataRow5 + top10Motoristas.length - 1, 0, 5);
                 XLSX.utils.book_append_sheet(wb, ws5, "Top Motoristas");
 
                 // ===== ABA 6: ANÁLISE DE DIVERGÊNCIAS =====
@@ -7626,15 +7974,32 @@
                     ws6['!autofilter'] = { ref: `A${dataRow6 + 7}:J${dataRow6 + 7 + divergenciasData.length - 1}` };
                     ws6['!freeze'] = { xSplit: 0, ySplit: dataRow6 + 7, topLeftCell: `A${dataRow6 + 8}`, state: 'frozen' };
                     ws6['!ref'] = `A1:J${dataRow6 + 7 + divergenciasData.length - 1}`;
+                    // Estilos
+                    estilizarLinhaCabecalho(ws6, dataRow6 + 6, 0, 9);
+                    estilizarLinhasDados(ws6, dataRow6 + 7, dataRow6 + 7 + divergenciasData.length - 1, 0, 9);
                 } else {
                     XLSX.utils.sheet_add_aoa(ws6, [['✅ Nenhuma divergência significativa encontrada!']], { origin: `A${dataRow6 + 7}` });
                     ws6['!ref'] = `A1:J${dataRow6 + 8}`;
+                    const refOk = `A${dataRow6 + 7}`;
+                    if (ws6[refOk]) ws6[refOk].s = {
+                        font: { bold: true, color: { rgb: '006100' } },
+                        fill: { patternType: 'solid', fgColor: { rgb: 'C6EFCE' } },
+                        alignment: { vertical: 'center', horizontal: 'center' }
+                    };
                 }
                 
                 if (!ws6['!merges']) ws6['!merges'] = [];
                 ws6['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 5 } });
                 ws6['!merges'].push({ s: { r: dataRow6, c: 0 }, e: { r: dataRow6, c: 5 } }); // Título Estatísticas
                 ws6['!merges'].push({ s: { r: dataRow6 + 6, c: 0 }, e: { r: dataRow6 + 6, c: 5 } }); // Título Lista
+                // Estilizar seções
+                estilizarSecao(ws6, `A${dataRow6}`);
+                const refSecaoLista = `A${dataRow6 + 6}`;
+                if (ws6[refSecaoLista]) ws6[refSecaoLista].s = {
+                    font: { name: 'Calibri', sz: 12, bold: true, color: { rgb: 'FFFFFF' } },
+                    fill: { patternType: 'solid', fgColor: { rgb: 'C00000' } },
+                    alignment: { vertical: 'center', horizontal: 'left' }
+                };
                 XLSX.utils.book_append_sheet(wb, ws6, "Divergências");
 
                 // ===== ABA 7: RESUMO EXECUTIVO =====
@@ -7680,7 +8045,7 @@
                     ['Taxa de Conformidade:', pesagensComNota.length > 0 ? `${(100 - (divergencias.length / pesagensComNota.length) * 100).toFixed(1)}%` : '100%']
                 ], { origin: `A${dataRow7}` });
                 
-                ws7['!cols'] = [{ wch: 30 }, { wch: 50 }];
+                ws7['!cols'] = [{ wch: 32 }, { wch: 55 }];
                 if (!ws7['!merges']) ws7['!merges'] = [];
                 ws7['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 3 } });
                 ws7['!merges'].push({ s: { r: dataRow7, c: 0 }, e: { r: dataRow7, c: 1 } }); // Indicadores
@@ -7688,6 +8053,44 @@
                 ws7['!merges'].push({ s: { r: dataRow7 + 13, c: 0 }, e: { r: dataRow7 + 13, c: 1 } }); // Destaques
                 ws7['!merges'].push({ s: { r: dataRow7 + 19, c: 0 }, e: { r: dataRow7 + 19, c: 1 } }); // Divergências
                 ws7['!ref'] = `A1:B${dataRow7 + 25}`;
+
+                // Estilizar as seções do dashboard
+                [dataRow7, dataRow7 + 7, dataRow7 + 13, dataRow7 + 19].forEach(linha => {
+                    const ref = `A${linha + 1}`;
+                    if (ws7[ref]) ws7[ref].s = this._estiloTituloFaixa(12);
+                });
+
+                // Estilizar as linhas de indicador (rótulo cinza + valor destaque)
+                const rangeWs7 = XLSX.utils.decode_range(ws7['!ref']);
+                for (let r = dataRow7; r <= rangeWs7.e.r; r++) {
+                    const labelRef = XLSX.utils.encode_cell({ r, c: 0 });
+                    const valueRef = XLSX.utils.encode_cell({ r, c: 1 });
+                    // Pular linhas de título (já estilizadas)
+                    if ([dataRow7, dataRow7 + 7, dataRow7 + 13, dataRow7 + 19].includes(r)) continue;
+
+                    if (ws7[labelRef] && ws7[labelRef].v) {
+                        ws7[labelRef].s = {
+                            font: { name: 'Calibri', sz: 11, bold: true },
+                            fill: { patternType: 'solid', fgColor: { rgb: 'F2F2F2' } },
+                            alignment: { vertical: 'center', horizontal: 'left', indent: 1 },
+                            border: {
+                                top:    { style: 'thin', color: { rgb: 'D9D9D9' } },
+                                bottom: { style: 'thin', color: { rgb: 'D9D9D9' } }
+                            }
+                        };
+                    }
+                    if (ws7[valueRef] && ws7[valueRef].v !== undefined && ws7[valueRef].v !== '') {
+                        ws7[valueRef].s = {
+                            font: { name: 'Calibri', sz: 11, color: { rgb: '0D9488' }, bold: true },
+                            alignment: { vertical: 'center', horizontal: 'left' },
+                            border: {
+                                top:    { style: 'thin', color: { rgb: 'D9D9D9' } },
+                                bottom: { style: 'thin', color: { rgb: 'D9D9D9' } }
+                            }
+                        };
+                    }
+                }
+
                 XLSX.utils.book_append_sheet(wb, ws7, "Dashboard");
 
                 XLSX.writeFile(wb, nomeArquivo);
@@ -8075,6 +8478,85 @@
                 ws['!merges'].push({ s: { r: 1, c: 0 }, e: { r: 1, c: mergeCols - 1 } }); // Nome empresa
                 ws['!merges'].push({ s: { r: 2, c: 0 }, e: { r: 2, c: mergeCols - 1 } }); // Período
                 ws['!merges'].push({ s: { r: 3, c: 0 }, e: { r: 3, c: mergeCols - 1 } }); // Data geração
+
+                // Estilizar cabeçalho superior (título, empresa, período, data)
+                if (ws['A1']) ws['A1'].s = this._estiloTituloFaixa(18);
+                if (ws['A2']) ws['A2'].s = {
+                    font: { name: 'Calibri', sz: 14, bold: true, color: { rgb: '1F4788' } },
+                    fill: { patternType: 'solid', fgColor: { rgb: 'D9E1F2' } },
+                    alignment: { vertical: 'center', horizontal: 'center' }
+                };
+                if (ws['A3']) ws['A3'].s = this._estiloInfo();
+                if (ws['A4']) ws['A4'].s = this._estiloInfo();
+                const refTituloPersonalizado = `A${currentRow}`;
+                if (ws[refTituloPersonalizado]) ws[refTituloPersonalizado].s = this._estiloTituloFaixa(14);
+
+                // Estilizar o cabeçalho da tabela de dados (linha dataStartRow em 1-indexado = dataStartRow-1 em 0-indexado)
+                const headerRowIdx = dataStartRow - 1;
+                for (let c = 0; c < numCols; c++) {
+                    const ref = XLSX.utils.encode_cell({ r: headerRowIdx, c });
+                    if (!ws[ref]) continue;
+                    ws[ref].s = {
+                        font:      { name: 'Calibri', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
+                        fill:      { patternType: 'solid', fgColor: { rgb: '0D9488' } },
+                        alignment: { vertical: 'center', horizontal: 'center', wrapText: true },
+                        border: {
+                            top:    { style: 'medium', color: { rgb: '000000' } },
+                            bottom: { style: 'medium', color: { rgb: '000000' } },
+                            left:   { style: 'thin', color: { rgb: 'FFFFFF' } },
+                            right:  { style: 'thin', color: { rgb: 'FFFFFF' } }
+                        }
+                    };
+                }
+
+                // Zebra + bordas nas linhas de dados (preservando destaques já aplicados em config.excelFormatting)
+                const borderColor = this._excelTheme.borderColor;
+                const thinBorder = {
+                    top:    { style: 'thin', color: { rgb: borderColor } },
+                    bottom: { style: 'thin', color: { rgb: borderColor } },
+                    left:   { style: 'thin', color: { rgb: borderColor } },
+                    right:  { style: 'thin', color: { rgb: borderColor } }
+                };
+                for (let r = dataStartRow; r <= lastDataRow; r++) {
+                    const zebraFill = (r - dataStartRow) % 2 === 1
+                        ? { patternType: 'solid', fgColor: { rgb: this._excelTheme.zebraDark } }
+                        : { patternType: 'solid', fgColor: { rgb: this._excelTheme.zebraLight } };
+                    for (let c = 0; c < numCols; c++) {
+                        const ref = XLSX.utils.encode_cell({ r, c });
+                        if (!ws[ref]) continue;
+                        const eNum = ws[ref].t === 'n' || typeof ws[ref].v === 'number';
+                        // Se já existe estilo (formatação condicional de peso), preservar cor de fundo
+                        const estiloExistente = ws[ref].s || {};
+                        ws[ref].s = {
+                            font:      estiloExistente.font || { name: 'Calibri', sz: 10 },
+                            fill:      estiloExistente.fill || zebraFill,
+                            alignment: { vertical: 'center', horizontal: eNum ? 'right' : 'left' },
+                            border:    thinBorder,
+                            ...(eNum ? { numFmt: '#,##0' } : {})
+                        };
+                    }
+                }
+
+                // Estilo da linha TOTAL (se houver)
+                if (config.excelFormulas) {
+                    const totalR = lastDataRow; // 0-indexado; lastDataRow+1 é a linha na planilha, então r = lastDataRow
+                    const totalRowIdx = lastDataRow; // 0-indexed row of total
+                    for (let c = 0; c < numCols; c++) {
+                        const ref = XLSX.utils.encode_cell({ r: totalRowIdx, c });
+                        if (!ws[ref]) continue;
+                        const eNum = ws[ref].t === 'n' || typeof ws[ref].v === 'number';
+                        ws[ref].s = {
+                            font:      { name: 'Calibri', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
+                            fill:      { patternType: 'solid', fgColor: { rgb: '1F4788' } },
+                            alignment: { vertical: 'center', horizontal: eNum ? 'right' : 'center' },
+                            border: {
+                                top:    { style: 'medium', color: { rgb: '000000' } },
+                                bottom: { style: 'medium', color: { rgb: '000000' } }
+                            },
+                            ...(eNum ? { numFmt: '#,##0' } : {})
+                        };
+                    }
+                }
                 
                 // Aplicar formatação condicional (cores por peso) - se ativado
                 if (config.excelFormatting) {
