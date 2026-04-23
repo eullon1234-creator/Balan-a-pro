@@ -7024,6 +7024,8 @@
                     const totalFornecedorTara = linhasFornecedor.reduce((acc, i) => acc + (Number(i.tara) || 0), 0);
                     const totalFornecedorLiquido = linhasFornecedor.reduce((acc, i) => acc + (Number(i.pesoLiquido) || 0), 0);
                     const totalFornecedorNota = linhasFornecedor.reduce((acc, i) => acc + (Number(i.pesoNota) || 0), 0);
+                    const mediaPesoLiquidoForn = linhasFornecedor.length > 0 ? totalFornecedorLiquido / linhasFornecedor.length : 0;
+                    const carretasForn = new Set(linhasFornecedor.map(i => String(i.placa || '').trim().toUpperCase()).filter(Boolean)).size;
 
                     const gruposProduto = linhasFornecedor.reduce((acc, i) => {
                         const nomeProduto = (i.produto && String(i.produto).trim()) ? String(i.produto).trim() : 'N/A';
@@ -7032,7 +7034,9 @@
                         return acc;
                     }, {});
 
-                    const dadosAba = [];
+                    // Monta a lista de linhas de dados com um "tipo" para estilizar depois
+                    // tipo: 'produto' | 'data' | 'subtotal' | 'espaco' | 'total'
+                    const linhasComTipo = [];
                     const produtosFornecedor = Object.keys(gruposProduto).sort((a, b) => a.localeCompare(b, 'pt-BR', { sensitivity: 'base' }));
 
                     produtosFornecedor.forEach((produtoNome) => {
@@ -7042,126 +7046,262 @@
                         const subtotalLiquido = linhasProduto.reduce((acc, i) => acc + (Number(i.pesoLiquido) || 0), 0);
                         const subtotalNota = linhasProduto.reduce((acc, i) => acc + (Number(i.pesoNota) || 0), 0);
 
-                        dadosAba.push({
-                            'Nº Ticket': `📦 PRODUTO: ${produtoNome}`,
-                            'Data Entrada': '',
-                            'Data Saída': '',
-                            'Placa': '',
-                            'Motorista': '',
-                            'Produto': produtoNome,
-                            'Transportadora': '',
-                            'Peso Bruto (kg)': '',
-                            'Tara (kg)': '',
-                            'Peso Líquido (kg)': '',
-                            'Peso Nota (kg)': '',
-                            '⚖️ Dif. (kg)': '',
-                            '📈 Dif. (%)': '',
-                            'Observação': ''
+                        linhasComTipo.push({
+                            tipo: 'produto',
+                            dados: {
+                                'Nº Ticket': `📦 PRODUTO: ${produtoNome}`,
+                                'Data Entrada': '', 'Data Saída': '', 'Placa': '', 'Motorista': '',
+                                'Produto': produtoNome, 'Transportadora': '',
+                                'Peso Bruto (kg)': '', 'Tara (kg)': '', 'Peso Líquido (kg)': '',
+                                'Peso Nota (kg)': '', '⚖️ Dif. (kg)': '', '📈 Dif. (%)': '', 'Observação': ''
+                            }
                         });
 
                         linhasProduto.forEach(i => {
-                            dadosAba.push({
-                                'Nº Ticket': i.ticket,
-                                'Data Entrada': i.dataEntrada,
-                                'Data Saída': i.dataSaida,
-                                'Placa': i.placa,
-                                'Motorista': i.motorista,
-                                'Produto': i.produto,
-                                'Transportadora': i.transportadora,
-                                'Peso Bruto (kg)': i.pesoBruto,
-                                'Tara (kg)': i.tara,
-                                'Peso Líquido (kg)': i.pesoLiquido,
-                                'Peso Nota (kg)': i.pesoNota,
-                                '⚖️ Dif. (kg)': i.diferenca,
-                                '📈 Dif. (%)': i.percentual,
-                                'Observação': i.observacao
+                            linhasComTipo.push({
+                                tipo: 'data',
+                                dados: {
+                                    'Nº Ticket': i.ticket,
+                                    'Data Entrada': i.dataEntrada,
+                                    'Data Saída': i.dataSaida,
+                                    'Placa': i.placa,
+                                    'Motorista': i.motorista,
+                                    'Produto': i.produto,
+                                    'Transportadora': i.transportadora,
+                                    'Peso Bruto (kg)': i.pesoBruto,
+                                    'Tara (kg)': i.tara,
+                                    'Peso Líquido (kg)': i.pesoLiquido,
+                                    'Peso Nota (kg)': i.pesoNota,
+                                    '⚖️ Dif. (kg)': i.diferenca,
+                                    '📈 Dif. (%)': i.percentual,
+                                    'Observação': i.observacao
+                                }
                             });
                         });
 
-                        dadosAba.push({
-                            'Nº Ticket': `Subtotal ${produtoNome}`,
-                            'Data Entrada': '',
-                            'Data Saída': '',
-                            'Placa': '',
-                            'Motorista': `${linhasProduto.length} viagens`,
-                            'Produto': produtoNome,
-                            'Transportadora': '',
-                            'Peso Bruto (kg)': subtotalBruto,
-                            'Tara (kg)': subtotalTara,
-                            'Peso Líquido (kg)': subtotalLiquido,
-                            'Peso Nota (kg)': subtotalNota > 0 ? subtotalNota : '',
-                            '⚖️ Dif. (kg)': subtotalNota > 0 ? (subtotalLiquido - subtotalNota) : '',
-                            '📈 Dif. (%)': subtotalNota > 0 ? (((subtotalLiquido - subtotalNota) / subtotalNota) * 100) : '',
-                            'Observação': ''
+                        linhasComTipo.push({
+                            tipo: 'subtotal',
+                            dados: {
+                                'Nº Ticket': `Subtotal ${produtoNome}`,
+                                'Data Entrada': '', 'Data Saída': '', 'Placa': '',
+                                'Motorista': `${linhasProduto.length} viagens`,
+                                'Produto': produtoNome,
+                                'Transportadora': '',
+                                'Peso Bruto (kg)': subtotalBruto,
+                                'Tara (kg)': subtotalTara,
+                                'Peso Líquido (kg)': subtotalLiquido,
+                                'Peso Nota (kg)': subtotalNota > 0 ? subtotalNota : '',
+                                '⚖️ Dif. (kg)': subtotalNota > 0 ? (subtotalLiquido - subtotalNota) : '',
+                                '📈 Dif. (%)': subtotalNota > 0 ? (((subtotalLiquido - subtotalNota) / subtotalNota) * 100) : '',
+                                'Observação': ''
+                            }
                         });
 
-                        dadosAba.push({
-                            'Nº Ticket': '',
-                            'Data Entrada': '',
-                            'Data Saída': '',
-                            'Placa': '',
-                            'Motorista': '',
-                            'Produto': '',
-                            'Transportadora': '',
-                            'Peso Bruto (kg)': '',
-                            'Tara (kg)': '',
-                            'Peso Líquido (kg)': '',
-                            'Peso Nota (kg)': '',
-                            '⚖️ Dif. (kg)': '',
-                            '📈 Dif. (%)': '',
+                        linhasComTipo.push({ tipo: 'espaco', dados: {
+                            'Nº Ticket': '', 'Data Entrada': '', 'Data Saída': '', 'Placa': '', 'Motorista': '',
+                            'Produto': '', 'Transportadora': '', 'Peso Bruto (kg)': '', 'Tara (kg)': '',
+                            'Peso Líquido (kg)': '', 'Peso Nota (kg)': '', '⚖️ Dif. (kg)': '', '📈 Dif. (%)': '', 'Observação': ''
+                        }});
+                    });
+
+                    linhasComTipo.push({
+                        tipo: 'total',
+                        dados: {
+                            'Nº Ticket': '⭐ TOTAIS',
+                            'Data Entrada': '', 'Data Saída': '', 'Placa': '',
+                            'Motorista': `${linhasFornecedor.length} viagens`,
+                            'Produto': '', 'Transportadora': '',
+                            'Peso Bruto (kg)': totalFornecedorBruto,
+                            'Tara (kg)': totalFornecedorTara,
+                            'Peso Líquido (kg)': totalFornecedorLiquido,
+                            'Peso Nota (kg)': totalFornecedorNota > 0 ? totalFornecedorNota : '',
+                            '⚖️ Dif. (kg)': totalFornecedorNota > 0 ? (totalFornecedorLiquido - totalFornecedorNota) : '',
+                            '📈 Dif. (%)': totalFornecedorNota > 0 ? (((totalFornecedorLiquido - totalFornecedorNota) / totalFornecedorNota) * 100) : '',
                             'Observação': ''
+                        }
+                    });
+
+                    // ===== MONTAGEM DA PLANILHA COM CABEÇALHO PROFISSIONAL =====
+                    const wsFornecedor = XLSX.utils.aoa_to_sheet([]);
+                    const tituloAba = `Relatório por Fornecedor — ${fornecedor}`;
+
+                    // Linha 1 – título azul
+                    wsFornecedor['A1'] = { t: 's', v: tituloAba, s: {
+                        font: { name: 'Calibri', sz: 18, bold: true, color: { rgb: 'FFFFFF' } },
+                        alignment: { vertical: 'center', horizontal: 'center' },
+                        fill: { patternType: 'solid', fgColor: { rgb: '1F4788' } },
+                        border: { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } }
+                    }};
+                    // Linha 2 – nome empresa
+                    wsFornecedor['A2'] = { t: 's', v: config.nome || 'Empresa', s: {
+                        font: { name: 'Calibri', sz: 14, bold: true },
+                        alignment: { vertical: 'center', horizontal: 'center' },
+                        fill: { patternType: 'solid', fgColor: { rgb: 'D9E1F2' } },
+                        border: { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } }
+                    }};
+                    // Linha 3 – período
+                    wsFornecedor['A3'] = { t: 's', v: periodo, s: {
+                        font: { name: 'Calibri', sz: 11 },
+                        alignment: { vertical: 'center', horizontal: 'left' },
+                        fill: { patternType: 'solid', fgColor: { rgb: 'F2F2F2' } }
+                    }};
+                    // Linha 4 – geração
+                    wsFornecedor['A4'] = { t: 's', v: `Gerado em: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}`, s: {
+                        font: { name: 'Calibri', sz: 10, italic: true },
+                        alignment: { vertical: 'center', horizontal: 'left' },
+                        fill: { patternType: 'solid', fgColor: { rgb: 'F2F2F2' } }
+                    }};
+
+                    // Linha 6 – faixa "RESUMO DO FORNECEDOR"
+                    wsFornecedor['A6'] = { t: 's', v: '📊 RESUMO DO FORNECEDOR', s: {
+                        font: { name: 'Calibri', sz: 14, bold: true, color: { rgb: 'FFFFFF' } },
+                        alignment: { vertical: 'center', horizontal: 'center' },
+                        fill: { patternType: 'solid', fgColor: { rgb: '0D9488' } },
+                        border: { top: { style: 'medium' }, bottom: { style: 'medium' }, left: { style: 'medium' }, right: { style: 'medium' } }
+                    }};
+
+                    // Linhas 7-8 – KPIs
+                    const kpiLabel = (v) => ({ t: 's', v, s: { font: { bold: true }, alignment: { horizontal: 'right' }, fill: { patternType: 'solid', fgColor: { rgb: 'E7E6E6' } } } });
+                    const kpiValue = (v, fmt = '#,##0') => ({ t: 'n', v, s: { font: { bold: true, color: { rgb: '0D9488' } }, alignment: { horizontal: 'center' }, fill: { patternType: 'solid', fgColor: { rgb: 'E7E6E6' } }, numFmt: fmt } });
+                    wsFornecedor['A7'] = kpiLabel('Total de Viagens:');
+                    wsFornecedor['B7'] = kpiValue(linhasFornecedor.length);
+                    wsFornecedor['D7'] = kpiLabel('Peso Bruto Total (kg):');
+                    wsFornecedor['E7'] = kpiValue(totalFornecedorBruto);
+                    wsFornecedor['A8'] = kpiLabel('Peso Líquido Total (kg):');
+                    wsFornecedor['B8'] = kpiValue(totalFornecedorLiquido);
+                    wsFornecedor['D8'] = kpiLabel('Tara Total (kg):');
+                    wsFornecedor['E8'] = kpiValue(totalFornecedorTara);
+                    wsFornecedor['A9'] = kpiLabel('Média/Viagem (kg):');
+                    wsFornecedor['B9'] = kpiValue(mediaPesoLiquidoForn);
+                    wsFornecedor['D9'] = kpiLabel('Carretas Diferentes:');
+                    wsFornecedor['E9'] = kpiValue(carretasForn);
+
+                    // Linha 11 (vazia) / Linha 12 – cabeçalho da tabela
+                    const dataStartRowForn = 12; // 1-indexado
+                    const cabecalhosForn = ['Nº Ticket', 'Data Entrada', 'Data Saída', 'Placa', 'Motorista', 'Produto', 'Transportadora', 'Peso Bruto (kg)', 'Tara (kg)', 'Peso Líquido (kg)', 'Peso Nota (kg)', '⚖️ Dif. (kg)', '📈 Dif. (%)', 'Observação'];
+                    cabecalhosForn.forEach((header, colIndex) => {
+                        const cellAddr = XLSX.utils.encode_cell({ r: dataStartRowForn - 1, c: colIndex });
+                        wsFornecedor[cellAddr] = { t: 's', v: header, s: {
+                            font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
+                            alignment: { vertical: 'center', horizontal: 'center', wrapText: true },
+                            fill: { patternType: 'solid', fgColor: { rgb: '0D9488' } },
+                            border: { top: { style: 'medium' }, bottom: { style: 'medium' }, left: { style: 'thin' }, right: { style: 'thin' } }
+                        }};
+                    });
+
+                    // ===== POPULAR LINHAS COM ESTILO POR TIPO =====
+                    const keysForn = cabecalhosForn;
+                    linhasComTipo.forEach((linha, linhaIdx) => {
+                        const excelRow = dataStartRowForn + linhaIdx;
+                        const isEven = linhaIdx % 2 === 0;
+                        const zebraFill = isEven ? 'FFFFFF' : 'F8FAFC';
+
+                        keysForn.forEach((key, colIndex) => {
+                            const cellAddr = XLSX.utils.encode_cell({ r: excelRow, c: colIndex });
+                            const valor = linha.dados[key];
+                            let tipo = 's';
+                            let tcell = valor;
+
+                            // Definir tipo da célula
+                            if (valor instanceof Date) {
+                                tipo = 'd';
+                            } else if (typeof valor === 'number') {
+                                tipo = 'n';
+                            } else if (valor === '' || valor == null) {
+                                tipo = 's';
+                                tcell = '';
+                            }
+
+                            // Estilo base conforme o tipo da LINHA
+                            let cellStyle;
+                            if (linha.tipo === 'produto') {
+                                cellStyle = {
+                                    font:      { name: 'Calibri', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
+                                    fill:      { patternType: 'solid', fgColor: { rgb: '0D9488' } },
+                                    alignment: { vertical: 'center', horizontal: colIndex === 0 ? 'left' : 'center', indent: colIndex === 0 ? 1 : 0 },
+                                    border:    { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } }
+                                };
+                            } else if (linha.tipo === 'subtotal') {
+                                cellStyle = {
+                                    font:      { name: 'Calibri', sz: 10, bold: true, color: { rgb: '1F4788' } },
+                                    fill:      { patternType: 'solid', fgColor: { rgb: 'DCE6F1' } },
+                                    alignment: { vertical: 'center', horizontal: colIndex >= 7 && colIndex <= 12 ? 'right' : 'left' },
+                                    border:    { top: { style: 'medium', color: { rgb: '1F4788' } }, bottom: { style: 'medium', color: { rgb: '1F4788' } }, left: { style: 'thin' }, right: { style: 'thin' } }
+                                };
+                            } else if (linha.tipo === 'total') {
+                                cellStyle = {
+                                    font:      { name: 'Calibri', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
+                                    fill:      { patternType: 'solid', fgColor: { rgb: '1F4788' } },
+                                    alignment: { vertical: 'center', horizontal: colIndex >= 7 && colIndex <= 12 ? 'right' : 'center' },
+                                    border:    { top: { style: 'medium' }, bottom: { style: 'medium' }, left: { style: 'thin' }, right: { style: 'thin' } }
+                                };
+                            } else if (linha.tipo === 'espaco') {
+                                cellStyle = {
+                                    font:      { name: 'Calibri', sz: 10 },
+                                    fill:      { patternType: 'solid', fgColor: { rgb: 'FFFFFF' } },
+                                    alignment: { vertical: 'center', horizontal: 'left' }
+                                };
+                            } else { // 'data'
+                                cellStyle = {
+                                    font:      { name: 'Calibri', sz: 10 },
+                                    fill:      { patternType: 'solid', fgColor: { rgb: zebraFill } },
+                                    alignment: { vertical: 'center', horizontal: (colIndex <= 6 || colIndex === 13) ? 'left' : 'center' },
+                                    border:    { top: { style: 'thin', color: { rgb: 'D9D9D9' } }, bottom: { style: 'thin', color: { rgb: 'D9D9D9' } }, left: { style: 'thin', color: { rgb: 'D9D9D9' } }, right: { style: 'thin', color: { rgb: 'D9D9D9' } } }
+                                };
+                            }
+
+                            // Formato numérico/data
+                            if (tipo === 'n') {
+                                cellStyle.numFmt = '#,##0';
+                                if (colIndex === 12) cellStyle.numFmt = '0.00"%"'; // Diferença %
+                            }
+                            if (tipo === 'd') {
+                                cellStyle.numFmt = 'dd/mm/yyyy hh:mm';
+                            }
+
+                            // Destaque para diferença negativa (linhas de dados e subtotal)
+                            if ((linha.tipo === 'data' || linha.tipo === 'subtotal') && colIndex === 11 && typeof tcell === 'number' && tcell < 0) {
+                                cellStyle.font = { ...cellStyle.font, bold: true, color: { rgb: 'FF0000' } };
+                            }
+
+                            // Percentual colorido (só em linhas de dados)
+                            if (linha.tipo === 'data' && colIndex === 12 && typeof tcell === 'number') {
+                                const abs = Math.abs(tcell);
+                                if (abs > 5) {
+                                    cellStyle.fill = { patternType: 'solid', fgColor: { rgb: 'FFC7CE' } };
+                                    cellStyle.font = { ...cellStyle.font, color: { rgb: '9C0006' }, bold: true };
+                                } else if (abs > 2) {
+                                    cellStyle.fill = { patternType: 'solid', fgColor: { rgb: 'FFEB9C' } };
+                                    cellStyle.font = { ...cellStyle.font, color: { rgb: '9C6500' } };
+                                } else {
+                                    cellStyle.fill = { patternType: 'solid', fgColor: { rgb: 'C6EFCE' } };
+                                    cellStyle.font = { ...cellStyle.font, color: { rgb: '006100' } };
+                                }
+                            }
+
+                            wsFornecedor[cellAddr] = { t: tipo, v: tcell, s: cellStyle };
                         });
                     });
 
-                    dadosAba.push({
-                        'Nº Ticket': '⭐ TOTAIS',
-                        'Data Entrada': '',
-                        'Data Saída': '',
-                        'Placa': '',
-                        'Motorista': `${linhasFornecedor.length} viagens`,
-                        'Produto': '',
-                        'Transportadora': '',
-                        'Peso Bruto (kg)': totalFornecedorBruto,
-                        'Tara (kg)': totalFornecedorTara,
-                        'Peso Líquido (kg)': totalFornecedorLiquido,
-                        'Peso Nota (kg)': totalFornecedorNota > 0 ? totalFornecedorNota : '',
-                        '⚖️ Dif. (kg)': totalFornecedorNota > 0 ? (totalFornecedorLiquido - totalFornecedorNota) : '',
-                        '📈 Dif. (%)': totalFornecedorNota > 0 ? (((totalFornecedorLiquido - totalFornecedorNota) / totalFornecedorNota) * 100) : '',
-                        'Observação': ''
-                    });
-
-                    const wsFornecedor = XLSX.utils.json_to_sheet(dadosAba);
-
+                    // ===== LAYOUT DA PLANILHA (FORNECEDOR) =====
                     wsFornecedor['!cols'] = [
-                        { wch: 12 }, { wch: 18 }, { wch: 18 }, { wch: 12 }, { wch: 22 },
-                        { wch: 24 }, { wch: 28 }, { wch: 16 }, { wch: 14 }, { wch: 18 },
+                        { wch: 18 }, { wch: 18 }, { wch: 18 }, { wch: 12 }, { wch: 25 },
+                        { wch: 25 }, { wch: 30 }, { wch: 16 }, { wch: 14 }, { wch: 18 },
                         { wch: 16 }, { wch: 14 }, { wch: 12 }, { wch: 45 }
                     ];
+                    const lastRowForn = dataStartRowForn + linhasComTipo.length - 1;
+                    wsFornecedor['!ref'] = `A1:N${lastRowForn}`;
+                    wsFornecedor['!autofilter'] = { ref: `A${dataStartRowForn}:N${lastRowForn}` };
+                    wsFornecedor['!freeze'] = { xSplit: 0, ySplit: dataStartRowForn, topLeftCell: `A${dataStartRowForn + 1}`, state: 'frozen' };
 
-                    const range = XLSX.utils.decode_range(wsFornecedor['!ref']);
-                    for (let r = range.s.r + 1; r <= range.e.r; r++) {
-                        for (const c of [1, 2]) {
-                            const ref = XLSX.utils.encode_cell({ c, r });
-                            if (wsFornecedor[ref] && wsFornecedor[ref].v instanceof Date) {
-                                wsFornecedor[ref].t = 'd';
-                                wsFornecedor[ref].z = 'dd/mm/yyyy hh:mm';
-                            }
-                        }
-
-                        for (const c of [7, 8, 9, 10, 11]) {
-                            const ref = XLSX.utils.encode_cell({ c, r });
-                            if (wsFornecedor[ref] && wsFornecedor[ref].v !== '') {
-                                wsFornecedor[ref].t = 'n';
-                                wsFornecedor[ref].z = '#,##0';
-                            }
-                        }
-
-                        const percentualRef = XLSX.utils.encode_cell({ c: 12, r });
-                        if (wsFornecedor[percentualRef] && wsFornecedor[percentualRef].v !== '') {
-                            wsFornecedor[percentualRef].t = 'n';
-                            wsFornecedor[percentualRef].z = '0.00"%"';
-                        }
-                    }
+                    // Mesclagens do cabeçalho
+                    wsFornecedor['!merges'] = [
+                        { s: { r: 0, c: 0 }, e: { r: 0, c: 13 } }, // Título
+                        { s: { r: 1, c: 0 }, e: { r: 1, c: 13 } }, // Empresa
+                        { s: { r: 2, c: 0 }, e: { r: 2, c: 13 } }, // Período
+                        { s: { r: 3, c: 0 }, e: { r: 3, c: 13 } }, // Geração
+                        { s: { r: 5, c: 0 }, e: { r: 5, c: 13 } }  // RESUMO DO FORNECEDOR
+                    ];
 
                     const nomeAbaFornecedor = normalizarNomeAba(fornecedor, idx, nomesAbasUsados);
                     XLSX.utils.book_append_sheet(wb, wsFornecedor, nomeAbaFornecedor);

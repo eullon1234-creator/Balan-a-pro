@@ -1,5 +1,5 @@
 // Service Worker para Balança Pro+ PWA
-const CACHE_NAME = 'balanca-pro-v1.2.0';
+const CACHE_NAME = 'balanca-pro-v1.2.1';
 const urlsToCache = [
   '/',
   '/index.html',
