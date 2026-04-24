@@ -80,6 +80,23 @@
             return toast;
         };
 
+        // ===== MÓDULO DE SEGURANÇA =====
+        // Aguardar carregamento do SecurityModule
+        const waitForSecurityModule = () => {
+            return new Promise((resolve) => {
+                if (window.SecurityModule) {
+                    resolve(window.SecurityModule);
+                } else {
+                    const checkInterval = setInterval(() => {
+                        if (window.SecurityModule) {
+                            clearInterval(checkInterval);
+                            resolve(window.SecurityModule);
+                        }
+                    }, 100);
+                }
+            });
+        };
+
         // Firebase v11.6.1
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -94,7 +111,7 @@
                 obras: [], 
                 pesagensPendentes: [], 
                 pesagensCompletas: [], 
-                config: { nome: 'Sua Empresa', cnpj: '', footer: '', color: '#0d9488', logo: '', password: '' }, 
+                config: { nome: 'Sua Empresa', cnpj: '', footer: '', color: '#0d9488', logo: '', password: '', passwordSalt: '' }, 
                 charts: { pesoProduto: null, pesagensDia: null }, 
                 currentTicket: null, 
                 ticketToEdit: null,
@@ -509,11 +526,11 @@
                 this.getFromCache('config', 'config').then(cachedConfig => {
                     if (cachedConfig) {
                         console.log('📦 Config carregado do cache');
-                        const defaultConfig = { nome: 'Sua Empresa', cnpj: '', footer: '', color: '#0d9488', logo: '', password: '' };
+                        const defaultConfig = { nome: 'Sua Empresa', cnpj: '', footer: '', color: '#0d9488', logo: '', password: '', passwordSalt: '' };
                         this.state.config = { ...defaultConfig, ...cachedConfig };
                         this.renderConfig();
                         this.renderFooter();
-                        if (!this.state.config.password) {
+                        if (!this.state.config.password && !this.state.config.passwordSalt) {
                             this.state.isAdmin = true;
                             this.updateUIAccess();
                         }
@@ -527,7 +544,7 @@
                         this.updateConnectionStatus('online');
                     }
 
-                    const defaultConfig = { nome: 'Sua Empresa', cnpj: '', footer: '', color: '#0d9488', logo: '', password: '' };
+                    const defaultConfig = { nome: 'Sua Empresa', cnpj: '', footer: '', color: '#0d9488', logo: '', password: '', passwordSalt: '' };
                     if (docSnap.exists()) {
                         const configData = docSnap.data();
                         this.state.config = { ...defaultConfig, ...configData };
@@ -539,7 +556,7 @@
                     }
                     this.renderConfig();
                     this.renderFooter();
-                    if (!this.state.config.password) {
+                    if (!this.state.config.password && !this.state.config.passwordSalt) {
                         this.state.isAdmin = true;
                         this.updateUIAccess();
                     }
@@ -549,7 +566,7 @@
                     this.getFromCache('config', 'config').then(cachedConfig => {
                         if (cachedConfig) {
                             console.log('🔄 Usando config do cache após erro');
-                            const defaultConfig = { nome: 'Sua Empresa', cnpj: '', footer: '', color: '#0d9488', logo: '', password: '' };
+                            const defaultConfig = { nome: 'Sua Empresa', cnpj: '', footer: '', color: '#0d9488', logo: '', password: '', passwordSalt: '' };
                             this.state.config = { ...defaultConfig, ...cachedConfig };
                             this.renderConfig();
                             this.renderFooter();
@@ -1527,19 +1544,38 @@
                 }
             },
 
-            handleAdminLoginAttempt(e) {
+            async handleAdminLoginAttempt(e) {
                 e.preventDefault();
                 const password = this.dom.adminPasswordInput.value;
-                const correctPassword = this.state.config.password || '';
+                
+                // Verificar se há senha configurada (hash ou texto plano para retrocompatibilidade)
+                const storedPassword = this.state.config.password || '';
+                const storedSalt = this.state.config.passwordSalt || '';
+                
+                let isValid = false;
+                
+                if (storedSalt && storedPassword) {
+                    // Novo método: senha com hash + salt
+                    isValid = await SecurityModule.verifyPasswordWithSalt(password, storedPassword, storedSalt);
+                } else if (storedPassword) {
+                    // Retrocompatibilidade: senha em texto plano (apenas temporário)
+                    isValid = password === storedPassword;
+                }
 
-                if (password === correctPassword) {
+                if (isValid) {
                     this.state.isAdmin = true;
                     this.updateUIAccess();
                     this.dom.modalAdminLogin.classList.remove('active');
                     this.dom.adminPasswordInput.value = '';
                     this.dom.loginErrorMsg.textContent = '';
+                    
+                    // Registrar log de sucesso
+                    await this.registrarLog('admin_login_sucesso', {});
                 } else {
                     this.dom.loginErrorMsg.textContent = 'Senha incorreta.';
+                    
+                    // Registrar tentativa falha
+                    await this.registrarLog('admin_login_falha', { ip: 'local' });
                 }
             },
 
@@ -4601,13 +4637,20 @@
                 const divergencias = this.detectarDivergencias(pesagensFiltradas);
                 const metrics = this.computeRelatorioMetrics(pesagensFiltradas);
 
-                this.dom.tabelaRelatorios.innerHTML = itemsParaPagina.length > 0 ? itemsParaPagina.map(p => `
-                    <tr class="border-b border-gray-200 hover:bg-gray-50">
-                        <td class="p-3">${p.num}</td><td class="p-3">${new Date(p.dataEntrada.seconds * 1000).toLocaleDateString('pt-BR')}</td>
-                        <td class="p-3">${p.placa}</td><td class="p-3 text-gray-500">${this.formatarNotasFiscais(p.notaFiscal, p.notaFiscal2)}</td><td class="p-3">${p.cliente || 'N/A'}</td>
-                        <td class="p-3">${p.transportadora || 'N/A'}</td><td class="p-3">${p.obra || 'N/A'}</td><td class="p-3">${p.produto}</td>
-                        <td class="p-3 text-gray-500">${p.certificado || 'N/A'}</td><td class="p-3 text-right font-semibold">${this.formatarPeso(p.pesoLiquido)} kg</td>
-                    </tr>`).join('') : '<tr><td colspan="10" class="p-4 text-center text-gray-500">Nenhum registo encontrado.</td></tr>';
+                // Tabela responsiva com classes condicionais para mobile
+                this.dom.tabelaRelatorios.innerHTML = itemsParaPagina.length > 0 ? itemsParaPagina.map((p, idx) => `
+                    <tr class="border-b border-gray-100 hover:bg-blue-50 transition-colors ${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}">
+                        <td class="p-3 whitespace-nowrap font-medium text-gray-900">${p.num}</td>
+                        <td class="p-3 whitespace-nowrap">${new Date(p.dataEntrada.seconds * 1000).toLocaleDateString('pt-BR')}</td>
+                        <td class="p-3 whitespace-nowrap font-semibold text-gray-700">${p.placa}</td>
+                        <td class="p-3 whitespace-nowrap text-gray-600">${this.formatarNotasFiscais(p.notaFiscal, p.notaFiscal2)}</td>
+                        <td class="p-3 whitespace-nowrap hidden md:table-cell">${p.cliente || 'N/A'}</td>
+                        <td class="p-3 whitespace-nowrap hidden lg:table-cell">${p.transportadora || 'N/A'}</td>
+                        <td class="p-3 whitespace-nowrap hidden xl:table-cell">${p.obra || 'N/A'}</td>
+                        <td class="p-3 whitespace-nowrap font-medium text-gray-800">${p.produto}</td>
+                        <td class="p-3 whitespace-nowrap text-gray-500 hidden sm:table-cell">${p.certificado || 'N/A'}</td>
+                        <td class="p-3 whitespace-nowrap text-right font-bold text-teal-600">${this.formatarPeso(p.pesoLiquido)} kg</td>
+                    </tr>`).join('') : '<tr><td colspan="10" class="p-4 text-center text-gray-500">📭 Nenhum registo encontrado.</td></tr>';
                 
                 if (pesagensFiltradas.length > 0) {
                     this.dom.relatorioTotalLiquido.textContent = `${this.formatarPeso(metrics.totalLiquido)} kg`;
@@ -4689,19 +4732,25 @@
                 if (!metrics) metrics = this.computeRelatorioMetrics(pesagens);
 
                 if (!pesagens.length) {
-                    this.dom.relatorioTransportadoraBody.innerHTML = '<tr><td colspan="4" class="p-3 text-center text-gray-500">Sem dados para exibir.</td></tr>';
+                    this.dom.relatorioTransportadoraBody.innerHTML = '<tr><td colspan="4" class="p-3 text-center text-gray-500">📭 Sem dados para exibir.</td></tr>';
                     this.dom.relatorioAgrupamentos.classList.add('hidden');
                     return;
                 }
 
                 const rows = Object.entries(metrics.transportadoras)
                     .sort(([, a], [, b]) => b.pesoLiquido - a.pesoLiquido)
-                    .map(([nome, valores]) => {
+                    .map(([nome, valores], idx) => {
                         const displayNome = nome === 'Sem Transportadora' ? 'Sem transportadora' : nome;
-                        return `<tr class="border-b border-gray-200 last:border-b-0"><td class="p-3">${displayNome}</td><td class="p-3 text-right">${valores.viagens}</td><td class="p-3 text-right">${this.formatarPeso(valores.pesoLiquido)} kg</td><td class="p-3 text-right">${this.formatarPeso(valores.pesoBruto)} kg</td></tr>`;
+                        const bgClass = idx % 2 === 0 ? 'bg-white' : 'bg-gray-50';
+                        return `<tr class="border-b border-gray-100 last:border-b-0 hover:bg-blue-50 transition-colors ${bgClass}">
+                            <td class="p-3 whitespace-nowrap font-medium text-gray-800">${displayNome}</td>
+                            <td class="p-3 whitespace-nowrap text-right font-semibold text-gray-700">${valores.viagens}</td>
+                            <td class="p-3 whitespace-nowrap text-right font-bold text-teal-600">${this.formatarPeso(valores.pesoLiquido)} kg</td>
+                            <td class="p-3 whitespace-nowrap text-right text-gray-600 hidden sm:table-cell">${this.formatarPeso(valores.pesoBruto)} kg</td>
+                        </tr>`;
                     }).join('');
 
-                this.dom.relatorioTransportadoraBody.innerHTML = rows || '<tr><td colspan="4" class="p-3 text-center text-gray-500">Sem dados para exibir.</td></tr>';
+                this.dom.relatorioTransportadoraBody.innerHTML = rows || '<tr><td colspan="4" class="p-3 text-center text-gray-500">📭 Sem dados para exibir.</td></tr>';
                 this.dom.relatorioAgrupamentos.classList.remove('hidden');
             },
             getFilteredTickets() {
@@ -5177,11 +5226,38 @@
                     cnpj: this.dom.configCnpjInput.value,
                     footer: this.dom.configFooterInput.value,
                     color: this.dom.configColorInput.value,
-                    password: this.dom.configPasswordInput.value,
                 };
+                
+                // Processar senha com hash + salt se uma nova senha foi fornecida
+                const newPassword = this.dom.configPasswordInput.value;
+                if (newPassword && newPassword.trim() !== '') {
+                    try {
+                        const result = await SecurityModule.hashPasswordWithSalt(newPassword);
+                        newConfig.password = result.hash;
+                        newConfig.passwordSalt = result.salt;
+                        console.log('✅ Senha criptografada com hash + salt');
+                    } catch (error) {
+                        console.error('❌ Erro ao criptografar senha:', error);
+                        showToast('⚠️ Erro ao processar senha\\nTente novamente', 'error');
+                        return;
+                    }
+                } else if (!newPassword || newPassword.trim() === '') {
+                    // Manter senha atual se campo estiver vazio
+                    newConfig.password = this.state.config.password;
+                    newConfig.passwordSalt = this.state.config.passwordSalt;
+                }
+                
                 const configRef = doc(this.state.db, 'app_state', 'config');
                 await setDoc(configRef, newConfig, { merge: true });
-                this.dom.modalConfig.classList.remove('active'); 
+                
+                // Atualizar estado local
+                this.state.config = newConfig;
+                
+                this.dom.modalConfig.classList.remove('active');
+                showToast('✅ Configurações salvas com sucesso', 'success');
+                
+                // Registrar log
+                await this.registrarLog('config_atualizada', { usuario: this.state.currentUser?.email || 'anonimo' });
             },
             handleLogoUpload(e) {
                 const file = e.target.files[0];
@@ -6514,7 +6590,6 @@
 
             exportarRelatorioExcel() {
                 const titulo = this.dom.relatorioTitulo.value.trim() || 'Relatório Geral de Pesagens';
-                const nomeArquivo = `${titulo.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_${new Date().getTime()}.xlsx`;
                 const pesagens = this.getFilteredPesagens();
                 const config = this.state.config;
                 
@@ -6522,6 +6597,34 @@
                     this.showNotification("⚠️ Nenhum dado para exportar.");
                     return;
                 }
+                
+                // Usar novo módulo profissional de exportação Excel
+                if (window.ExcelExporter) {
+                    const filtros = {
+                        dataInicio: this.dom.filtroDataInicio?.value,
+                        dataFim: this.dom.filtroDataFim?.value
+                    };
+                    
+                    const wb = ExcelExporter.createProfessionalWorkbook(titulo, config, pesagens, filtros);
+                    const nomeArquivo = `${titulo.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_${Date.now()}.xlsx`;
+                    
+                    if (ExcelExporter.exportToFile(wb, nomeArquivo)) {
+                        this.showNotification("✅ Relatório Excel profissional exportado com sucesso!");
+                        this.logAtividade('exportou_excel_profissional', `Exportou ${titulo} com ${pesagens.length} registros`);
+                    } else {
+                        throw new Error('Erro ao exportar Excel');
+                    }
+                } else {
+                    // Fallback para método antigo se módulo não estiver disponível
+                    this.exportarRelatorioExcelLegado();
+                }
+            },
+
+            exportarRelatorioExcelLegado() {
+                const titulo = this.dom.relatorioTitulo.value.trim() || 'Relatório Geral de Pesagens';
+                const nomeArquivo = `${titulo.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_legado_${new Date().getTime()}.xlsx`;
+                const pesagens = this.getFilteredPesagens();
+                const config = this.state.config;
                 
                 const totalPesoBruto = pesagens.reduce((acc, p) => acc + (Number(p.pesoBruto) || 0), 0);
                 const totalTara = pesagens.reduce((acc, p) => acc + (Number(p.tara) || 0), 0);
@@ -7511,8 +7614,40 @@
             },
 
             exportarRelatorioExcelMultiAbas() {
+                const titulo = this.dom.relatorioTitulo.value.trim() || 'Relatório Completo Multi-Abas';
+                const pesagens = this.getFilteredPesagens();
+                const config = this.state.config;
+
+                if (pesagens.length === 0) {
+                    this.showNotification("⚠️ Nenhum dado para exportar.");
+                    return;
+                }
+
+                // Usar novo módulo profissional de exportação Excel com múltiplas abas
+                if (window.ExcelExporter) {
+                    const filtros = {
+                        dataInicio: this.dom.filtroDataInicio?.value,
+                        dataFim: this.dom.filtroDataFim?.value
+                    };
+                    
+                    const wb = ExcelExporter.createProfessionalWorkbook(titulo, config, pesagens, filtros);
+                    const nomeArquivo = `${titulo.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_completo_${Date.now()}.xlsx`;
+                    
+                    if (ExcelExporter.exportToFile(wb, nomeArquivo)) {
+                        this.showNotification("✅ Relatório Excel multi-abas profissional exportado com sucesso!");
+                        this.logAtividade('exportou_excel_multiabas_profissional', `Exportou ${titulo} com ${pesagens.length} registros`);
+                    } else {
+                        throw new Error('Erro ao exportar Excel');
+                    }
+                } else {
+                    // Fallback para método antigo
+                    this.exportarRelatorioExcelMultiAbasLegado();
+                }
+            },
+
+            exportarRelatorioExcelMultiAbasLegado() {
                 const titulo = this.dom.relatorioTitulo.value.trim() || 'Relatório Completo';
-                const nomeArquivo = `${titulo.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_completo_${new Date().getTime()}.xlsx`;
+                const nomeArquivo = `${titulo.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_completo_legado_${new Date().getTime()}.xlsx`;
                 const pesagens = this.getFilteredPesagens();
                 const metrics = this.computeRelatorioMetrics(pesagens);
                 const config = this.state.config;
