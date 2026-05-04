@@ -1,5 +1,5 @@
 // Service Worker para Balança Pro+ PWA
-const CACHE_NAME = 'balanca-pro-v1.1.0';
+const CACHE_NAME = 'balanca-pro-v1.2.1';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -9,7 +9,7 @@ const urlsToCache = [
   'https://cdn.tailwindcss.com',
   'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js',
-  'https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js',
+  'https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js',
   'https://cdn.jsdelivr.net/npm/chart.js',
   'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@400;700&display=swap'
 ];

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 ﻿// Verificar carregamento de bibliotecas externas
 window.addEventListener('DOMContentLoaded', () => {
     const bibliotecas = {
@@ -101,6 +102,94 @@ const App = {
             total: 0
         }
     },
+=======
+﻿        // Verificar carregamento de bibliotecas externas
+        window.addEventListener('DOMContentLoaded', () => {
+            // Exibir versão do app (fonte única: window.APP_VERSION definido em index.html)
+            const versao = window.APP_VERSION || 'dev';
+            document.querySelectorAll('#app-version-auth, #app-version-header').forEach(el => {
+                el.textContent = versao;
+            });
+            console.log(`🚀 Balança Pro+ ${versao}`);
+
+            const bibliotecas = {
+                'jsPDF': typeof window.jspdf !== 'undefined',
+                'Chart.js': typeof Chart !== 'undefined',
+                'SheetJS': typeof XLSX !== 'undefined'
+            };
+            
+            const falharam = Object.entries(bibliotecas)
+                .filter(([nome, carregou]) => !carregou)
+                .map(([nome]) => nome);
+            
+            if (falharam.length > 0) {
+                console.warn('⚠️ Bibliotecas não carregadas:', falharam.join(', '));
+            } else {
+                console.log('✅ Todas as bibliotecas carregadas');
+            }
+
+            // ===== Ripple Effect em botões =====
+            document.addEventListener('click', (e) => {
+                const btn = e.target.closest('button, .btn-primary');
+                if (!btn || btn.disabled) return;
+                const rect = btn.getBoundingClientRect();
+                const ripple = document.createElement('span');
+                ripple.className = 'ripple-wave';
+                const size = Math.max(rect.width, rect.height);
+                ripple.style.cssText = `width:${size}px;height:${size}px;left:${e.clientX - rect.left - size/2}px;top:${e.clientY - rect.top - size/2}px`;
+                btn.appendChild(ripple);
+                ripple.addEventListener('animationend', () => ripple.remove());
+            });
+        });
+
+        // ===== SISTEMA GLOBAL DE TOAST NOTIFICATIONS =====
+        window.showToast = function(message, type = 'info', duration = 5000) {
+            const container = document.getElementById('toast-container');
+            if (!container) return;
+
+            const icons = { success: '✅', error: '❌', warning: '⚠️', info: 'ℹ️' };
+
+            // Separar primeira linha (título) das demais (corpo)
+            const linhas = message.replace(/\\n/g, '\n').split('\n').map(l => l.trim()).filter(Boolean);
+            // Limpar emojis do início para o título
+            const titulo = linhas[0] || '';
+            const corpo = linhas.slice(1).join(' ') || '';
+
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            toast.style.setProperty('--toast-duration', `${duration}ms`);
+            toast.innerHTML = `
+                <span class="toast-icon">${icons[type] || 'ℹ️'}</span>
+                <div class="toast-body">
+                    <div class="toast-title">${titulo}</div>
+                    ${corpo ? `<div class="toast-message">${corpo}</div>` : ''}
+                </div>
+                <button class="toast-close" aria-label="Fechar">✕</button>
+            `;
+
+            toast.querySelector('.toast-close').addEventListener('click', () => {
+                toast.classList.add('removing');
+                setTimeout(() => toast.remove(), 300);
+            });
+
+            container.appendChild(toast);
+
+            if (duration > 0) {
+                setTimeout(() => {
+                    if (!toast.isConnected) return;
+                    toast.classList.add('removing');
+                    setTimeout(() => toast.remove(), 300);
+                }, duration);
+            }
+
+            return toast;
+        };
+
+        // Firebase v11.6.1
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, onSnapshot, setDoc, addDoc, collection, deleteDoc, updateDoc, arrayUnion, arrayRemove, writeBatch, getDoc, getDocs, query, where, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+>>>>>>> 85d7f01ba704e3f7dc8ef8eaf26ae78dd379cab7
 
     async init() {
         console.log("🚀 Iniciando aplicação...");
@@ -108,6 +197,7 @@ const App = {
         this.cacheDOMElements();
         this.bindEvents();
 
+<<<<<<< HEAD
         // Mostrar tela de autenticação imediatamente
         this.showAuthScreen();
 
@@ -139,6 +229,34 @@ const App = {
                     await this.handleUserAuthenticated(user);
                 } else {
                     console.log("❌ Usuário não autenticado");
+=======
+                    // Listener de autenticação
+                    onAuthStateChanged(this.state.auth, async (user) => {
+                        if (user) {
+                            console.log("✅ Usuário autenticado:", user.email);
+                            await this.handleUserAuthenticated(user);
+                        } else {
+                            console.log("❌ Usuário não autenticado");
+                            this.showAuthScreen();
+                        }
+                    });
+                    
+                    console.log("✅ Firebase inicializado com sucesso");
+                    
+                } catch (error) {
+                    console.error("❌ Erro ao inicializar Firebase:", error);
+                    
+                    if (error.code === 'auth/network-request-failed') {
+                        showToast('❌ Sem conexão\nVerifique sua internet e tente novamente.', 'error', 7000);
+                    } else if (error.code === 'auth/invalid-api-key') {
+                        showToast('❌ Configuração inválida\nEntre em contato com o administrador.', 'error', 8000);
+                    } else if (error.message?.includes('quota') || error.message?.includes('exceeded')) {
+                        showToast('⚠️ Cota do Firebase esgotada\nO sistema está temporariamente indisponível. Aguarde a renovação ou upgrade do plano.', 'warning', 10000);
+                    } else {
+                        showToast(`❌ Erro Firebase\n${error.message}`, 'error', 8000);
+                    }
+                    
+>>>>>>> 85d7f01ba704e3f7dc8ef8eaf26ae78dd379cab7
                     this.showAuthScreen();
                 }
             });
@@ -1955,8 +2073,26 @@ const App = {
     animateCounter(element, target, duration = 1000) {
         if (!element) return;
 
+<<<<<<< HEAD
         const start = 0;
         const startTime = performance.now();
+=======
+                // Register
+                this.dom.formRegister?.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const nome = document.getElementById('register-nome').value;
+                    const email = document.getElementById('register-email').value;
+                    const password = document.getElementById('register-password').value;
+                    const confirmPassword = document.getElementById('register-password-confirm').value;
+                    
+                    if (password !== confirmPassword) {
+                        showToast('❌ As senhas não coincidem\nVerifique e tente novamente.', 'error');
+                        return;
+                    }
+                    
+                    await this.handleRegister(nome, email, password);
+                });
+>>>>>>> 85d7f01ba704e3f7dc8ef8eaf26ae78dd379cab7
 
         const animate = (currentTime) => {
             const elapsed = currentTime - startTime;
@@ -1968,7 +2104,445 @@ const App = {
             const current = Math.floor(start + (target - start) * easeProgress);
             element.textContent = current;
 
+<<<<<<< HEAD
             if (progress < 1) {
+=======
+            // ==================== FUNÇÕES DE SEGURANÇA ====================
+            
+            // Verificar se está bloqueado por tentativas
+            checkLoginLockout() {
+                const now = Date.now();
+                if (this.state.security.lockedUntil > now) {
+                    const remainingTime = Math.ceil((this.state.security.lockedUntil - now) / 60000);
+                    return {
+                        locked: true,
+                        message: `🔒 Conta temporariamente bloqueada por segurança.\n\nAguarde ${remainingTime} minuto(s) para tentar novamente.`
+                    };
+                }
+                return { locked: false };
+            },
+            
+            // Registrar tentativa de login
+            recordLoginAttempt(success) {
+                if (success) {
+                    // Resetar tentativas após login bem-sucedido
+                    this.state.security.loginAttempts = 0;
+                    this.state.security.lockedUntil = 0;
+                    localStorage.setItem('loginAttempts', '0');
+                    localStorage.setItem('lockedUntil', '0');
+                } else {
+                    // Incrementar tentativas falhadas
+                    this.state.security.loginAttempts++;
+                    this.state.security.lastAttemptTime = Date.now();
+                    localStorage.setItem('loginAttempts', this.state.security.loginAttempts.toString());
+                    localStorage.setItem('lastAttemptTime', this.state.security.lastAttemptTime.toString());
+                    
+                    // Bloquear se excedeu tentativas
+                    if (this.state.security.loginAttempts >= this.state.security.maxLoginAttempts) {
+                        this.state.security.lockedUntil = Date.now() + this.state.security.lockoutDuration;
+                        localStorage.setItem('lockedUntil', this.state.security.lockedUntil.toString());
+                    }
+                }
+            },
+            
+            // Sanitizar input para prevenir XSS
+            sanitizeInput(value) {
+                if (typeof value !== 'string') return value;
+                return value
+                    .replace(/[<>]/g, '') // Remove tags HTML
+                    .replace(/javascript:/gi, '') // Remove javascript:
+                    .replace(/on\w+=/gi, '') // Remove event handlers
+                    .trim();
+            },
+            
+            // Validar senha forte
+            validatePasswordStrength(password) {
+                const requirements = {
+                    length: password.length >= 8,
+                    uppercase: /[A-Z]/.test(password),
+                    lowercase: /[a-z]/.test(password),
+                    number: /[0-9]/.test(password),
+                    special: /[!@#$%^&*(),.?":{}|<>]/.test(password)
+                };
+                
+                const strength = Object.values(requirements).filter(Boolean).length;
+                
+                return {
+                    isValid: requirements.length && requirements.uppercase && requirements.number,
+                    strength: strength,
+                    requirements: requirements,
+                    message: this.getPasswordStrengthMessage(requirements)
+                };
+            },
+            
+            getPasswordStrengthMessage(req) {
+                const missing = [];
+                if (!req.length) missing.push('mínimo 8 caracteres');
+                if (!req.uppercase) missing.push('1 letra maiúscula');
+                if (!req.number) missing.push('1 número');
+                
+                if (missing.length === 0) return '✅ Senha forte!';
+                return `⚠️ Falta: ${missing.join(', ')}`;
+            },
+            
+            // Monitorar inatividade da sessão
+            startSessionMonitor() {
+                // Resetar timer a cada atividade
+                const resetActivity = () => {
+                    this.state.security.lastActivity = Date.now();
+                };
+                
+                // Eventos de atividade
+                ['mousedown', 'keydown', 'scroll', 'touchstart'].forEach(event => {
+                    document.addEventListener(event, resetActivity);
+                });
+                
+                // Verificar timeout a cada minuto
+                setInterval(() => {
+                    const inactive = Date.now() - this.state.security.lastActivity;
+                    if (inactive > this.state.security.sessionTimeout) {
+                        if (this.state.currentUser) {
+                            showToast('⏰ Sessão expirada\nPor inatividade, você será desconectado agora.', 'warning', 4000);
+                            setTimeout(() => this.handleLogout(), 2000);
+                        }
+                    }
+                }, 60000); // Verificar a cada 1 minuto
+            },
+            
+            // Validar e sanitizar todos os inputs de formulário
+            sanitizeFormData(formData) {
+                const sanitized = {};
+                for (const [key, value] of Object.entries(formData)) {
+                    if (typeof value === 'string') {
+                        sanitized[key] = this.sanitizeInput(value);
+                    } else {
+                        sanitized[key] = value;
+                    }
+                }
+                return sanitized;
+            },
+
+            async handleLogin(email, password) {
+                // Verificar bloqueio por tentativas
+                const lockCheck = this.checkLoginLockout();
+                if (lockCheck.locked) {
+                    showToast(lockCheck.message, 'error', 8000);
+                    return;
+                }
+                
+                // Sanitizar inputs
+                email = this.sanitizeInput(email);
+                
+                const btnLogin = document.getElementById('btn-login');
+                btnLogin.disabled = true;
+                btnLogin.textContent = '⏳ Entrando...';
+                
+                try {
+                    await signInWithEmailAndPassword(this.state.auth, email, password);
+                    console.log("✅ Login bem-sucedido");
+                    
+                    // Registrar sucesso
+                    this.recordLoginAttempt(true);
+                    
+                    // Iniciar monitoramento de sessão
+                    this.startSessionMonitor();
+                    
+                } catch (error) {
+                    console.error("❌ Erro no login:", error);
+                    
+                    // Registrar falha
+                    this.recordLoginAttempt(false);
+                    
+                    // Mostrar mensagem com contador de tentativas
+                    const remainingAttempts = this.state.security.maxLoginAttempts - this.state.security.loginAttempts;
+                    let message = `❌ Erro: ${this.getAuthErrorMessage(error.code)}`;
+                    
+                    if (remainingAttempts > 0 && remainingAttempts <= 3) {
+                        message += `\nTentativas restantes: ${remainingAttempts}`;
+                    }
+                    
+                    showToast(message, 'error', 6000);
+                } finally {
+                    btnLogin.disabled = false;
+                    btnLogin.textContent = '🚀 Entrar';
+                }
+            },
+
+            async handleRegister(nome, email, password) {
+                // Sanitizar inputs
+                nome = this.sanitizeInput(nome);
+                email = this.sanitizeInput(email);
+                
+                // Validar senha forte
+                const passwordCheck = this.validatePasswordStrength(password);
+                if (!passwordCheck.isValid) {
+                    showToast(`🔒 Senha fraca\n${passwordCheck.message}`, 'warning', 6000);
+                    return;
+                }
+                
+                const btnRegister = document.getElementById('btn-register');
+                btnRegister.disabled = true;
+                btnRegister.textContent = '⏳ Criando conta...';
+                
+                try {
+                    console.log("🔍 Iniciando registro de conta...");
+                    console.log("📧 Email:", email);
+                    console.log("👤 Nome:", nome);
+                    
+                    // PRIMEIRO: Criar usuário no Firebase Auth
+                    console.log("🔐 Criando usuário no Firebase Auth...");
+                    const userCredential = await createUserWithEmailAndPassword(this.state.auth, email, password);
+                    const user = userCredential.user;
+                    console.log("✅ Usuário criado no Auth:", user.uid);
+                    
+                    // DEPOIS: Verificar se é o primeiro usuário (agora temos permissão pois estamos autenticados)
+                    console.log("🔍 Verificando se é o primeiro usuário...");
+                    let isFirstUser = false;
+                    try {
+                        const usersSnapshot = await getDocs(collection(this.state.db, 'users'));
+                        isFirstUser = usersSnapshot.empty;
+                        console.log(`📊 Primeiro usuário: ${isFirstUser ? 'SIM' : 'NÃO'}`);
+                    } catch (checkError) {
+                        console.warn("⚠️ Não foi possível verificar usuários existentes, assumindo que não é o primeiro");
+                        isFirstUser = false;
+                    }
+                    
+                    // Determinar role: primeiro usuário = dono, demais = visualizador
+                    const role = isFirstUser ? 'dono' : 'visualizador';
+                    console.log(`👑 Role definida: ${role}`);
+                    
+                    // Criar documento do usuário no Firestore
+                    console.log("💾 Salvando dados do usuário no Firestore...");
+                    await setDoc(doc(this.state.db, 'users', user.uid), {
+                        uid: user.uid,
+                        email: email,
+                        nome: nome,
+                        role: role,
+                        criadoEm: Timestamp.now(),
+                        ativo: true,
+                        canEditProgramacao: false
+                    });
+                    console.log("✅ Dados salvos no Firestore");
+                    
+                    // Se for o primeiro usuário, configurar como dono no sistema
+                    if (isFirstUser) {
+                        console.log("⚙️ Configurando email do dono no sistema...");
+                        await setDoc(doc(this.state.db, 'config', 'system'), {
+                            emailDono: email
+                        }, { merge: true });
+                        console.log("✅ Email do dono configurado");
+                    }
+                    
+                    console.log(`✅ Conta criada com sucesso como ${role}`);
+                    
+                    // Aguardar um pouco para garantir que o documento foi salvo
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    
+                    showToast(`✅ Conta criada com sucesso!\nVocê foi registrado como ${role === 'dono' ? '👑 Proprietário' : '👁️ Visualizador'}. Carregando o sistema...`, 'success', 6000);
+                    
+                    // NÃO fazer logout - deixar o sistema carregar automaticamente via onAuthStateChanged
+                    console.log("✅ Login automático após registro");
+                    
+                    // Limpar campos do formulário
+                    document.getElementById('register-nome').value = '';
+                    document.getElementById('register-email').value = '';
+                    document.getElementById('register-password').value = '';
+                    document.getElementById('register-password-confirm').value = '';
+                    
+                } catch (error) {
+                    console.error("❌ Erro ao criar conta:", error);
+                    
+                    // Tratamento de erros específicos
+                    let mensagemErro = this.getAuthErrorMessage(error.code);
+                    
+                    // Se o erro for de permissão do Firestore, dar uma mensagem mais clara
+                    if (error.code === 'permission-denied') {
+                        mensagemErro = 'Erro de permissão. Verifique as regras do Firestore no console do Firebase.';
+                    }
+                    
+                    showToast(`❌ Erro ao criar conta\n${mensagemErro}`, 'error', 7000);
+                } finally {
+                    btnRegister.disabled = false;
+                    btnRegister.textContent = '✅ Criar Conta';
+                }
+            },
+
+            async handleUserAuthenticated(user) {
+                try {
+                    console.log("🔍 Buscando dados do usuário:", user.email);
+                    
+                    // Aguardar um pouco para garantir que o documento foi salvo
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    
+                    // Buscar dados do usuário no Firestore
+                    const userDocRef = doc(this.state.db, 'users', user.uid);
+                    let userDocSnap = await getDoc(userDocRef);
+                    
+                    // Se não encontrar, tentar mais 2 vezes com delay
+                    let attempts = 0;
+                    while (!userDocSnap.exists() && attempts < 2) {
+                        console.log(`⏳ Tentativa ${attempts + 1} de 3...`);
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                        userDocSnap = await getDoc(userDocRef);
+                        attempts++;
+                    }
+                    
+                    if (!userDocSnap.exists()) {
+                        console.error("❌ Documento do usuário não encontrado após 3 tentativas");
+                        showToast('❌ Dados do usuário não encontrados\nTente fazer login novamente. Se persistir, contate o administrador.', 'error', 8000);
+                        await signOut(this.state.auth);
+                        return;
+                    }
+                    
+                    const userData = userDocSnap.data();
+                    
+                    // Verificar se usuário está ativo
+                    if (!userData.ativo) {
+                        showToast('❌ Conta desativada\nEntre em contato com o administrador.', 'error', 8000);
+                        await signOut(this.state.auth);
+                        return;
+                    }
+                    
+                    this.state.currentUser = user;
+                    this.state.userDoc = userData;
+                    this.state.userRole = userData.role;
+                    this.state.userId = user.uid;
+                    
+                    // Definir isAdmin baseado no role
+                    this.state.isAdmin = (this.state.userRole === 'dono' || this.state.userRole === 'operador');
+                    
+                    // Carregar email do dono
+                    await this.loadDonoEmail();
+                    
+                    // Registrar login
+                    await this.registerLogin(user.uid);
+                    
+                    // Anexar listeners do Firestore (agora que está autenticado)
+                    this.attachFirestoreListeners();
+                    
+                    // Mostrar interface principal
+                    this.showMainApp();
+                    
+                    if (this.state.unsubscribeUserDoc) {
+                        this.state.unsubscribeUserDoc();
+                    }
+                    this.state.unsubscribeUserDoc = onSnapshot(userDocRef, (snapshot) => {
+                        if (!snapshot.exists()) {
+                            return;
+                        }
+
+                        const dadosAtualizados = snapshot.data();
+                        const roleAnterior = this.state.userRole;
+
+                        this.state.userDoc = dadosAtualizados;
+                        this.state.userRole = dadosAtualizados.role;
+                        this.state.isAdmin = (this.state.userRole === 'dono' || this.state.userRole === 'operador');
+
+                        if (roleAnterior !== this.state.userRole) {
+                            this.applyRolePermissions();
+                        } else {
+                            this.updateProgramacaoControls();
+                            this.renderProgramacaoDia();
+                        }
+                    });
+
+                    console.log("✅ Usuário carregado:", this.state.userDoc);
+                } catch (error) {
+                    console.error("❌ Erro ao carregar usuário:", error);
+                    
+                    if (error.code === 'permission-denied') {
+                        showToast('❌ Erro de permissão\nVerifique as regras do Firestore no Firebase Console.', 'error', 8000);
+                    } else {
+                        showToast('❌ Erro ao carregar dados\nTente novamente ou entre em contato com o suporte.', 'error', 7000);
+                    }
+                    
+                    await signOut(this.state.auth);
+                }
+            },
+
+            async registerLogin(uid) {
+                try {
+                    await addDoc(collection(this.state.db, 'login_history'), {
+                        uid: uid,
+                        email: this.state.currentUser.email,
+                        timestamp: Timestamp.now(),
+                        role: this.state.userRole
+                    });
+                    
+                    // Registrar no log de atividades
+                    await this.registrarLog('login', 'Usuário fez login no sistema');
+                } catch (error) {
+                    console.error("⚠️ Erro ao registrar login:", error);
+                }
+            },
+
+            // ===== SISTEMA DE LOGS E AUDITORIA =====
+            async registrarLog(acao, descricao, detalhes = {}) {
+                if (!this.state.currentUser || !this.state.db) return;
+                
+                try {
+                    await addDoc(collection(this.state.db, 'logs'), {
+                        usuarioId: this.state.currentUser.uid,
+                        usuarioNome: this.state.userDoc?.nome || 'Desconhecido',
+                        usuarioEmail: this.state.currentUser.email,
+                        role: this.state.userRole,
+                        acao: acao,
+                        descricao: descricao,
+                        detalhes: detalhes,
+                        timestamp: Timestamp.now()
+                    });
+                    console.log(`📝 Log registrado: ${acao} - ${descricao}`);
+                } catch (error) {
+                    console.error("⚠️ Erro ao registrar log:", error);
+                }
+            },
+
+            // ===== FUNÇÕES DE SKELETON LOADER E ANIMAÇÕES =====
+            showStatsSkeleton(show) {
+                const stats = [
+                    this.dom.dbStatPesagensHoje,
+                    this.dom.dbStatPesoHoje,
+                    this.dom.dbStatVeiculosPatio,
+                    this.dom.dbStatTicketMedio
+                ];
+                
+                stats.forEach(stat => {
+                    if (stat) {
+                        if (show) {
+                            stat.classList.add('skeleton');
+                            stat.textContent = '...';
+                        } else {
+                            stat.classList.remove('skeleton');
+                        }
+                    }
+                });
+            },
+
+            animateCounter(element, target, duration = 1000) {
+                if (!element) return;
+                
+                const start = 0;
+                const startTime = performance.now();
+                
+                const animate = (currentTime) => {
+                    const elapsed = currentTime - startTime;
+                    const progress = Math.min(elapsed / duration, 1);
+                    
+                    // Easing function (easeOutCubic)
+                    const easeProgress = 1 - Math.pow(1 - progress, 3);
+                    
+                    const current = Math.floor(start + (target - start) * easeProgress);
+                    element.textContent = current;
+                    
+                    if (progress < 1) {
+                        requestAnimationFrame(animate);
+                    } else {
+                        element.textContent = target;
+                        element.classList.remove('skeleton');
+                    }
+                };
+                
+>>>>>>> 85d7f01ba704e3f7dc8ef8eaf26ae78dd379cab7
                 requestAnimationFrame(animate);
             } else {
                 element.textContent = target;
@@ -2270,7 +2844,244 @@ const App = {
             const select = document.getElementById('filtro-log-usuario');
             if (!select) return;
 
+<<<<<<< HEAD
             select.innerHTML = '<option value="">Todos os usuários</option>';
+=======
+            // ==================== HELPERS DE ESTILO EXCEL (xlsx-js-style) ====================
+            // Paleta padrão do app
+            _excelTheme: {
+                headerBg:    '0D9488', // Verde teal (brand)
+                headerFg:    'FFFFFF',
+                titleBg:     '1F4788', // Azul escuro (títulos)
+                titleFg:     'FFFFFF',
+                sectionBg:   'D9E1F2', // Azul claro (subtítulos/seções)
+                zebraLight:  'FFFFFF',
+                zebraDark:   'F2F7F6',
+                totalBg:     '1F4788',
+                totalFg:     'FFFFFF',
+                borderColor: 'D9D9D9'
+            },
+
+            /**
+             * Aplica estilo padrão do app a uma planilha gerada via json_to_sheet ou similar.
+             * @param {object} ws - worksheet XLSX
+             * @param {object} [opts]
+             * @param {number} [opts.headerRow=0] - linha do cabeçalho (0-indexado)
+             * @param {number} [opts.firstDataRow=headerRow+1] - primeira linha de dados
+             * @param {number[]} [opts.numericCols=[]] - índices de colunas numéricas (para formato #,##0)
+             * @param {number[]} [opts.percentCols=[]] - índices de colunas de percentual
+             * @param {number[]} [opts.dateCols=[]] - índices de colunas de data
+             * @param {boolean} [opts.zebra=true] - listras alternadas
+             * @param {boolean} [opts.freeze=true] - congelar cabeçalho
+             * @param {boolean} [opts.autofilter=true] - ativar autofilter
+             * @param {number[]} [opts.colWidths] - larguras (wch) das colunas
+             * @param {boolean} [opts.hasTotalRow=false] - se a última linha é um total
+             */
+            _aplicarEstiloPlanilha(ws, opts = {}) {
+                if (!ws || !ws['!ref']) return;
+                const theme = this._excelTheme;
+                const {
+                    headerRow = 0,
+                    firstDataRow = headerRow + 1,
+                    numericCols = [],
+                    percentCols = [],
+                    dateCols = [],
+                    zebra = true,
+                    freeze = true,
+                    autofilter = true,
+                    colWidths,
+                    hasTotalRow = false
+                } = opts;
+
+                const range = XLSX.utils.decode_range(ws['!ref']);
+                const thinBorder = {
+                    top:    { style: 'thin', color: { rgb: theme.borderColor } },
+                    bottom: { style: 'thin', color: { rgb: theme.borderColor } },
+                    left:   { style: 'thin', color: { rgb: theme.borderColor } },
+                    right:  { style: 'thin', color: { rgb: theme.borderColor } }
+                };
+
+                // Estilo do cabeçalho
+                for (let c = range.s.c; c <= range.e.c; c++) {
+                    const ref = XLSX.utils.encode_cell({ r: headerRow, c });
+                    if (!ws[ref]) continue;
+                    ws[ref].s = {
+                        font:      { name: 'Calibri', sz: 11, bold: true, color: { rgb: theme.headerFg } },
+                        fill:      { patternType: 'solid', fgColor: { rgb: theme.headerBg } },
+                        alignment: { vertical: 'center', horizontal: 'center', wrapText: true },
+                        border: {
+                            top:    { style: 'medium', color: { rgb: '000000' } },
+                            bottom: { style: 'medium', color: { rgb: '000000' } },
+                            left:   { style: 'thin', color: { rgb: 'FFFFFF' } },
+                            right:  { style: 'thin', color: { rgb: 'FFFFFF' } }
+                        }
+                    };
+                }
+
+                // Estilo das linhas de dados
+                const dataEndRow = hasTotalRow ? range.e.r - 1 : range.e.r;
+                for (let r = firstDataRow; r <= dataEndRow; r++) {
+                    const idxLinha = r - firstDataRow;
+                    const fill = zebra && (idxLinha % 2 === 1)
+                        ? { patternType: 'solid', fgColor: { rgb: theme.zebraDark } }
+                        : { patternType: 'solid', fgColor: { rgb: theme.zebraLight } };
+
+                    for (let c = range.s.c; c <= range.e.c; c++) {
+                        const ref = XLSX.utils.encode_cell({ r, c });
+                        if (!ws[ref]) continue;
+
+                        const alinhamento = numericCols.includes(c) || percentCols.includes(c)
+                            ? 'right'
+                            : (dateCols.includes(c) ? 'center' : 'left');
+
+                        const cellStyle = {
+                            font:      { name: 'Calibri', sz: 10 },
+                            fill,
+                            alignment: { vertical: 'center', horizontal: alinhamento, wrapText: false },
+                            border:    thinBorder
+                        };
+
+                        if (numericCols.includes(c)) {
+                            cellStyle.numFmt = '#,##0';
+                            if (ws[ref].t !== 'n' && typeof ws[ref].v === 'number') ws[ref].t = 'n';
+                        }
+                        if (percentCols.includes(c)) {
+                            cellStyle.numFmt = '0.00"%"';
+                        }
+                        if (dateCols.includes(c)) {
+                            cellStyle.numFmt = 'dd/mm/yyyy hh:mm';
+                        }
+
+                        ws[ref].s = cellStyle;
+                    }
+                }
+
+                // Estilo da linha de total (se houver)
+                if (hasTotalRow) {
+                    const totalR = range.e.r;
+                    for (let c = range.s.c; c <= range.e.c; c++) {
+                        const ref = XLSX.utils.encode_cell({ r: totalR, c });
+                        if (!ws[ref]) continue;
+                        const totalStyle = {
+                            font:      { name: 'Calibri', sz: 11, bold: true, color: { rgb: theme.totalFg } },
+                            fill:      { patternType: 'solid', fgColor: { rgb: theme.totalBg } },
+                            alignment: { vertical: 'center', horizontal: numericCols.includes(c) || percentCols.includes(c) ? 'right' : 'center' },
+                            border: {
+                                top:    { style: 'medium', color: { rgb: '000000' } },
+                                bottom: { style: 'medium', color: { rgb: '000000' } },
+                                left:   { style: 'thin', color: { rgb: 'FFFFFF' } },
+                                right:  { style: 'thin', color: { rgb: 'FFFFFF' } }
+                            }
+                        };
+                        if (numericCols.includes(c)) totalStyle.numFmt = '#,##0';
+                        if (percentCols.includes(c)) totalStyle.numFmt = '0.00"%"';
+                        if (dateCols.includes(c)) totalStyle.numFmt = 'dd/mm/yyyy hh:mm';
+                        ws[ref].s = totalStyle;
+                    }
+                }
+
+                // Larguras de coluna
+                if (Array.isArray(colWidths) && colWidths.length) {
+                    ws['!cols'] = colWidths.map(w => (typeof w === 'number' ? { wch: w } : w));
+                } else if (!ws['!cols']) {
+                    const autoCols = [];
+                    for (let c = range.s.c; c <= range.e.c; c++) {
+                        let max = 10;
+                        for (let r = headerRow; r <= range.e.r; r++) {
+                            const ref = XLSX.utils.encode_cell({ r, c });
+                            const val = ws[ref] && ws[ref].v != null ? String(ws[ref].v) : '';
+                            if (val.length > max) max = Math.min(val.length + 2, 45);
+                        }
+                        autoCols.push({ wch: max });
+                    }
+                    ws['!cols'] = autoCols;
+                }
+
+                // Autofilter + freeze no cabeçalho
+                if (autofilter) {
+                    const firstRef = XLSX.utils.encode_cell({ r: headerRow, c: range.s.c });
+                    const lastRef  = XLSX.utils.encode_cell({ r: dataEndRow, c: range.e.c });
+                    ws['!autofilter'] = { ref: `${firstRef}:${lastRef}` };
+                }
+                if (freeze) {
+                    const topLeft = XLSX.utils.encode_cell({ r: firstDataRow, c: 0 });
+                    ws['!freeze'] = { xSplit: 0, ySplit: firstDataRow, topLeftCell: topLeft, state: 'frozen' };
+                }
+            },
+
+            /** Aplica estilo a uma célula de título (faixa azul escura) */
+            _estiloTituloFaixa(size = 14) {
+                return {
+                    font:      { name: 'Calibri', sz: size, bold: true, color: { rgb: this._excelTheme.titleFg } },
+                    fill:      { patternType: 'solid', fgColor: { rgb: this._excelTheme.titleBg } },
+                    alignment: { vertical: 'center', horizontal: 'center' },
+                    border: {
+                        top:    { style: 'medium', color: { rgb: '000000' } },
+                        bottom: { style: 'medium', color: { rgb: '000000' } },
+                        left:   { style: 'medium', color: { rgb: '000000' } },
+                        right:  { style: 'medium', color: { rgb: '000000' } }
+                    }
+                };
+            },
+
+            /** Aplica estilo a uma célula de seção (faixa clara) */
+            _estiloSecao() {
+                return {
+                    font:      { name: 'Calibri', sz: 12, bold: true, color: { rgb: '1F4788' } },
+                    fill:      { patternType: 'solid', fgColor: { rgb: this._excelTheme.sectionBg } },
+                    alignment: { vertical: 'center', horizontal: 'left' }
+                };
+            },
+
+            /** Aplica estilo a célula de subtítulo/info (cinza claro, itálico) */
+            _estiloInfo() {
+                return {
+                    font:      { name: 'Calibri', sz: 10, italic: true, color: { rgb: '555555' } },
+                    fill:      { patternType: 'solid', fgColor: { rgb: 'F2F2F2' } },
+                    alignment: { vertical: 'center', horizontal: 'left' }
+                };
+            },
+
+            async exportarLogsExcel() {
+                if (this.state.userRole !== 'dono') return;
+                
+                try {
+                    const logsSnapshot = await getDocs(collection(this.state.db, 'logs'));
+                    const logs = [];
+                    
+                    logsSnapshot.forEach((doc) => {
+                        const log = doc.data();
+                        logs.push({
+                            'Data/Hora': new Date(log.timestamp.seconds * 1000).toLocaleString('pt-BR'),
+                            'Usuário': log.usuarioNome,
+                            'Email': log.usuarioEmail,
+                            'Nível': log.role,
+                            'Ação': log.acao,
+                            'Descrição': log.descricao
+                        });
+                    });
+
+                    if (logs.length === 0) {
+                        this.showNotification("⚠️ Nenhum log para exportar.");
+                        return;
+                    }
+
+                    const ws = XLSX.utils.json_to_sheet(logs);
+                    this._aplicarEstiloPlanilha(ws, {
+                        colWidths: [22, 28, 32, 14, 20, 55]
+                    });
+
+                    const wb = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(wb, ws, "Logs de Atividades");
+                    XLSX.writeFile(wb, `logs_atividades_${new Date().toISOString().split('T')[0]}.xlsx`);
+
+                    this.showNotification("✅ Logs exportados com sucesso!");
+                } catch (error) {
+                    console.error("❌ Erro ao exportar logs:", error);
+                    this.showNotification("❌ Erro ao exportar logs");
+                }
+            },
+>>>>>>> 85d7f01ba704e3f7dc8ef8eaf26ae78dd379cab7
 
             usersSnapshot.forEach((doc) => {
                 const user = doc.data();
@@ -6022,6 +6833,7 @@ const App = {
                     return padraoAntigo.test(placaLimpa) || padraoMercosul.test(placaLimpa);
                 };
 
+<<<<<<< HEAD
                 // Função para validar peso
                 const validarPeso = (peso, nomeCampo) => {
                     const pesoNum = parseFloat(peso);
@@ -6137,6 +6949,160 @@ const App = {
                         peso1: 0, peso2: 0,
                         peso1_eixo1: null, peso1_eixo2: null,
                         peso2_eixo1: null, peso2_eixo2: null,
+=======
+                return `${nomeBase.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.${extensao}`;
+            },
+
+            exportarRelatorioPDF() {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF();
+                const pesagens = this.getFilteredPesagens();
+                if (pesagens.length === 0) { this.showNotification("⚠️ Nenhum dado para exportar."); return; }
+
+                // Calcular totais
+                const totalViagens = pesagens.length;
+                const totalPesoLiquido = pesagens.reduce((acc, p) => acc + (Number(p.pesoLiquido) || 0), 0);
+
+                // Título
+                doc.setFontSize(16);
+                doc.text("Relatório Simples de Pesagens", 14, 15);
+
+                // Totais no topo
+                doc.setFontSize(10);
+                doc.text(`Total de Viagens: ${totalViagens}`, 14, 25);
+                doc.text(`Peso Líquido Total: ${this.formatarPeso(totalPesoLiquido)} kg`, 14, 30);
+
+                const head = [['Nº', 'Data', 'Placa', 'Produto', 'Cliente', 'P. Líquido']];
+                const body = pesagens.map(p => [
+                    p.num,
+                    new Date(p.dataEntrada.seconds * 1000).toLocaleDateString('pt-BR'),
+                    p.placa,
+                    p.produto,
+                    p.cliente,
+                    this.formatarPeso(p.pesoLiquido) + ' kg'
+                ]);
+
+                doc.autoTable({ 
+                    head, 
+                    body,
+                    startY: 35,
+                    theme: 'striped',
+                    headStyles: { fillColor: [13, 148, 136] }
+                });
+
+                // Totais no rodapé
+                const finalY = doc.lastAutoTable.finalY + 10;
+                doc.setFontSize(10);
+                doc.setFont("helvetica", "bold");
+                doc.text(`Total de Viagens: ${totalViagens}`, 14, finalY);
+                doc.text(`Peso Líquido Total: ${this.formatarPeso(totalPesoLiquido)} kg`, 14, finalY + 5);
+
+                doc.save(this._gerarNomeRelatorio('pdf'));
+            },
+
+            exportarRelatorioExcel() {
+                const titulo = this.dom.relatorioTitulo.value.trim() || 'Relatório Geral de Pesagens';
+                const nomeArquivo = `${titulo.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_${new Date().getTime()}.xlsx`;
+                const pesagens = this.getFilteredPesagens();
+                const config = this.state.config;
+                
+                if (pesagens.length === 0) {
+                    this.showNotification("⚠️ Nenhum dado para exportar.");
+                    return;
+                }
+                
+                const totalPesoBruto = pesagens.reduce((acc, p) => acc + (Number(p.pesoBruto) || 0), 0);
+                const totalTara = pesagens.reduce((acc, p) => acc + (Number(p.tara) || 0), 0);
+                const totalPesoLiquido = pesagens.reduce((acc, p) => acc + (Number(p.pesoLiquido) || 0), 0);
+                const totalPesoNota = pesagens.reduce((acc, p) => acc + (Number(p.pesoNota) || 0), 0);
+                const mediaPesoLiquido = pesagens.length > 0 ? totalPesoLiquido / pesagens.length : 0;
+                const maiorPesoLiquido = pesagens.length > 0 ? Math.max(...pesagens.map(p => Number(p.pesoLiquido) || 0)) : 0;
+                const pesagensComNota = pesagens.filter(p => (Number(p.pesoNota) || 0) > 0);
+                const divergenciasQtd = pesagensComNota.filter(p => {
+                    const pesoNota = Number(p.pesoNota) || 0;
+                    if (pesoNota <= 0) return false;
+                    const percentual = Math.abs(((Number(p.pesoLiquido) || 0) - pesoNota) / pesoNota) * 100;
+                    return percentual > 5;
+                }).length;
+                const taxaConformidade = pesagensComNota.length > 0
+                    ? ((pesagensComNota.length - divergenciasQtd) / pesagensComNota.length) * 100
+                    : 100;
+
+                const produtosRanking = Object.entries(pesagens.reduce((acc, p) => {
+                    const nome = p.produto || 'N/A';
+                    if (!acc[nome]) acc[nome] = { viagens: 0, peso: 0 };
+                    acc[nome].viagens += 1;
+                    acc[nome].peso += Number(p.pesoLiquido) || 0;
+                    return acc;
+                }, {})).sort(([, a], [, b]) => b.peso - a.peso).slice(0, 5);
+
+                const transportadorasRanking = Object.entries(pesagens.reduce((acc, p) => {
+                    const nome = p.transportadora || 'Sem transportadora';
+                    if (!acc[nome]) acc[nome] = { viagens: 0, peso: 0 };
+                    acc[nome].viagens += 1;
+                    acc[nome].peso += Number(p.pesoLiquido) || 0;
+                    return acc;
+                }, {})).sort(([, a], [, b]) => b.peso - a.peso).slice(0, 5);
+
+                const fornecedoresResumo = Object.entries(pesagens.reduce((acc, p) => {
+                    const nome = (p.cliente && String(p.cliente).trim()) ? String(p.cliente).trim() : 'Sem Fornecedor';
+                    if (!acc[nome]) acc[nome] = { viagens: 0, peso: 0, placas: new Set() };
+                    acc[nome].viagens += 1;
+                    acc[nome].peso += Number(p.pesoLiquido) || 0;
+                    if (p.placa) acc[nome].placas.add(String(p.placa).trim().toUpperCase());
+                    return acc;
+                }, {})).map(([nome, dados]) => ({
+                    nome,
+                    viagens: dados.viagens,
+                    carretas: dados.placas.size,
+                    peso: dados.peso
+                })).sort((a, b) => b.peso - a.peso);
+
+                const produtosResumo = Object.entries(pesagens.reduce((acc, p) => {
+                    const nome = (p.produto && String(p.produto).trim()) ? String(p.produto).trim() : 'N/A';
+                    if (!acc[nome]) acc[nome] = { viagens: 0, peso: 0 };
+                    acc[nome].viagens += 1;
+                    acc[nome].peso += Number(p.pesoLiquido) || 0;
+                    return acc;
+                }, {})).map(([nome, dados]) => ({
+                    nome,
+                    viagens: dados.viagens,
+                    peso: dados.peso
+                })).sort((a, b) => b.peso - a.peso);
+
+                const dados = pesagens.map((p, index) => {
+                    let obs = p.observacao || '';
+                    if (p.isPesagemDupla) { 
+                        obs += ` [P. Dupla: P1(${p.peso1_eixo1}+${p.peso1_eixo2}) P2(${p.peso2_eixo1}+${p.peso2_eixo2})]`; 
+                    }
+
+                    const pesoLiquido = Number(p.pesoLiquido) || 0;
+                    const pesoNota = Number(p.pesoNota) || 0;
+                    const diferenca = pesoNota > 0 ? (pesoLiquido - pesoNota) : '';
+                    const percentual = pesoNota > 0 ? (((pesoLiquido - pesoNota) / pesoNota) * 100) : '';
+                    
+                    return {
+                        num: index + 1,
+                        ticket: p.num,
+                        notaFiscal: this.formatarNotasFiscais(p.notaFiscal, p.notaFiscal2),
+                        dataEntrada: new Date(p.dataEntrada.seconds * 1000),
+                        dataSaida: new Date(p.dataSaida.seconds * 1000),
+                        placa: p.placa,
+                        motorista: p.motorista,
+                        cliente: p.cliente,
+                        transportadora: p.transportadora || 'N/A',
+                        razaoSocial: p.razaoSocial || 'N/A',
+                        obra: p.obra,
+                        produto: p.produto,
+                        certificado: p.certificado,
+                        pesoBruto: p.pesoBruto,
+                        tara: p.tara,
+                        pesoLiquido: p.pesoLiquido,
+                        pesoNota: pesoNota > 0 ? pesoNota : '',
+                        diferenca: diferenca,
+                        percentual: percentual,
+                        observacao: obs.trim()
+>>>>>>> 85d7f01ba704e3f7dc8ef8eaf26ae78dd379cab7
                     };
 
                     if (pesagem.pesoBruto > pesagem.tara) {
@@ -6179,6 +7145,7 @@ const App = {
                     totalErros: erros.length
                 });
 
+<<<<<<< HEAD
                 this.showNotification(message);
 
             } catch (error) {
@@ -6411,6 +7378,741 @@ const App = {
                     alignment: { vertical: 'center', horizontal: 'center', wrapText: true },
                     fill: { patternType: 'solid', fgColor: { rgb: '0D9488' } },
                     border: { top: { style: 'medium' }, bottom: { style: 'medium' }, left: { style: 'thin' }, right: { style: 'thin' } }
+=======
+                const wb = XLSX.utils.book_new();
+                const ws = XLSX.utils.aoa_to_sheet([]);
+                
+                let currentRow = 0;
+                
+                ws['A1'] = { t: 's', v: titulo, s: {
+                    font: { name: 'Calibri', sz: 18, bold: true, color: { rgb: 'FFFFFF' } },
+                    alignment: { vertical: 'center', horizontal: 'center' },
+                    fill: { patternType: 'solid', fgColor: { rgb: '1F4788' } },
+                    border: { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } }
+                }};
+                currentRow++;
+                
+                ws['A2'] = { t: 's', v: config.nome || 'Empresa', s: {
+                    font: { name: 'Calibri', sz: 14, bold: true },
+                    alignment: { vertical: 'center', horizontal: 'center' },
+                    fill: { patternType: 'solid', fgColor: { rgb: 'D9E1F2' } },
+                    border: { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } }
+                }};
+                currentRow++;
+                
+                const dataInicio = this.dom.filtroDataInicio.value;
+                const dataFim = this.dom.filtroDataFim.value;
+                let periodo = 'Período: Todos os registros';
+                if (dataInicio && dataFim) { 
+                    periodo = `Período: ${new Date(dataInicio+'T00:00:00').toLocaleDateString('pt-BR')} a ${new Date(dataFim+'T00:00:00').toLocaleDateString('pt-BR')}`; 
+                }
+                ws['A3'] = { t: 's', v: periodo, s: {
+                    font: { name: 'Calibri', sz: 11 },
+                    alignment: { vertical: 'center', horizontal: 'left' },
+                    fill: { patternType: 'solid', fgColor: { rgb: 'F2F2F2' } }
+                }};
+                currentRow++;
+                
+                ws['A4'] = { t: 's', v: `Gerado em: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}`, s: {
+                    font: { name: 'Calibri', sz: 10, italic: true },
+                    alignment: { vertical: 'center', horizontal: 'left' },
+                    fill: { patternType: 'solid', fgColor: { rgb: 'F2F2F2' } }
+                }};
+                currentRow++;
+
+                currentRow++;
+
+                ws[`A${currentRow + 1}`] = { t: 's', v: '📊 RESUMO EXECUTIVO', s: {
+                    font: { name: 'Calibri', sz: 14, bold: true, color: { rgb: 'FFFFFF' } },
+                    alignment: { vertical: 'center', horizontal: 'center' },
+                    fill: { patternType: 'solid', fgColor: { rgb: '0D9488' } },
+                    border: { top: { style: 'medium' }, bottom: { style: 'medium' }, left: { style: 'medium' }, right: { style: 'medium' } }
+                }};
+                currentRow++;
+
+                const resumoRow1 = currentRow + 1;
+                ws[`A${resumoRow1}`] = { t: 's', v: 'Total de Pesagens:', s: { font: { bold: true }, alignment: { horizontal: 'right' }, fill: { patternType: 'solid', fgColor: { rgb: 'E7E6E6' } } }};
+                ws[`B${resumoRow1}`] = { t: 'n', v: pesagens.length, s: { font: { bold: true, color: { rgb: '0D9488' } }, alignment: { horizontal: 'center' }, fill: { patternType: 'solid', fgColor: { rgb: 'E7E6E6' } }, numFmt: '#,##0' }};
+                ws[`D${resumoRow1}`] = { t: 's', v: 'Peso Bruto Total (kg):', s: { font: { bold: true }, alignment: { horizontal: 'right' }, fill: { patternType: 'solid', fgColor: { rgb: 'E7E6E6' } } }};
+                ws[`E${resumoRow1}`] = { t: 'n', v: totalPesoBruto, s: { font: { bold: true, color: { rgb: '0D9488' } }, alignment: { horizontal: 'center' }, fill: { patternType: 'solid', fgColor: { rgb: 'E7E6E6' } }, numFmt: '#,##0' }};
+                currentRow++;
+
+                const resumoRow2 = currentRow + 1;
+                ws[`A${resumoRow2}`] = { t: 's', v: 'Peso Líquido Total (kg):', s: { font: { bold: true }, alignment: { horizontal: 'right' }, fill: { patternType: 'solid', fgColor: { rgb: 'E7E6E6' } } }};
+                ws[`B${resumoRow2}`] = { t: 'n', v: totalPesoLiquido, s: { font: { bold: true, color: { rgb: '0D9488' } }, alignment: { horizontal: 'center' }, fill: { patternType: 'solid', fgColor: { rgb: 'E7E6E6' } }, numFmt: '#,##0' }};
+                ws[`D${resumoRow2}`] = { t: 's', v: 'Tara Total (kg):', s: { font: { bold: true }, alignment: { horizontal: 'right' }, fill: { patternType: 'solid', fgColor: { rgb: 'E7E6E6' } } }};
+                ws[`E${resumoRow2}`] = { t: 'n', v: totalTara, s: { font: { bold: true, color: { rgb: '0D9488' } }, alignment: { horizontal: 'center' }, fill: { patternType: 'solid', fgColor: { rgb: 'E7E6E6' } }, numFmt: '#,##0' }};
+                currentRow++;
+
+                const resumoRow3 = currentRow + 1;
+                ws[`A${resumoRow3}`] = { t: 's', v: 'Média Peso Líquido/Ticket (kg):', s: { font: { bold: true }, alignment: { horizontal: 'right' }, fill: { patternType: 'solid', fgColor: { rgb: 'E7E6E6' } } }};
+                ws[`B${resumoRow3}`] = { t: 'n', v: mediaPesoLiquido, s: { font: { bold: true, color: { rgb: '0D9488' } }, alignment: { horizontal: 'center' }, fill: { patternType: 'solid', fgColor: { rgb: 'E7E6E6' } }, numFmt: '#,##0' }};
+                ws[`D${resumoRow3}`] = { t: 's', v: 'Maior Peso Líquido (kg):', s: { font: { bold: true }, alignment: { horizontal: 'right' }, fill: { patternType: 'solid', fgColor: { rgb: 'E7E6E6' } } }};
+                ws[`E${resumoRow3}`] = { t: 'n', v: maiorPesoLiquido, s: { font: { bold: true, color: { rgb: '0D9488' } }, alignment: { horizontal: 'center' }, fill: { patternType: 'solid', fgColor: { rgb: 'E7E6E6' } }, numFmt: '#,##0' }};
+                currentRow++;
+
+                const resumoRow4 = currentRow + 1;
+                ws[`A${resumoRow4}`] = { t: 's', v: 'Pesagens c/ Nota Fiscal:', s: { font: { bold: true }, alignment: { horizontal: 'right' }, fill: { patternType: 'solid', fgColor: { rgb: 'E7E6E6' } } }};
+                ws[`B${resumoRow4}`] = { t: 'n', v: pesagensComNota.length, s: { font: { bold: true, color: { rgb: '0D9488' } }, alignment: { horizontal: 'center' }, fill: { patternType: 'solid', fgColor: { rgb: 'E7E6E6' } }, numFmt: '#,##0' }};
+                ws[`D${resumoRow4}`] = { t: 's', v: 'Conformidade (±5%):', s: { font: { bold: true }, alignment: { horizontal: 'right' }, fill: { patternType: 'solid', fgColor: { rgb: 'E7E6E6' } } }};
+                ws[`E${resumoRow4}`] = { t: 'n', v: taxaConformidade, s: { font: { bold: true, color: { rgb: '0D9488' } }, alignment: { horizontal: 'center' }, fill: { patternType: 'solid', fgColor: { rgb: 'E7E6E6' } }, numFmt: '0.00"%"' }};
+                currentRow++;
+
+                currentRow++;
+
+                const dataStartRow = currentRow + 1;
+                const headers = ['#', 'Nº Ticket', 'Nota Fiscal', 'Data Entrada', 'Data Saída', 'Placa', 'Motorista', 'Cliente/Forn.', 'Transportadora', 'Obra', 'Produto', 'Certificado', 'Peso Bruto (kg)', 'Tara (kg)', 'Peso Líquido (kg)', 'Peso Nota (kg)', '⚖️ Dif. (kg)', '📈 Dif. (%)', 'Observação'];
+
+                headers.forEach((header, colIndex) => {
+                    const cellAddr = XLSX.utils.encode_cell({ r: dataStartRow - 1, c: colIndex });
+                    ws[cellAddr] = { t: 's', v: header, s: {
+                        font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
+                        alignment: { vertical: 'center', horizontal: 'center', wrapText: true },
+                        fill: { patternType: 'solid', fgColor: { rgb: '0D9488' } },
+                        border: { top: { style: 'medium' }, bottom: { style: 'medium' }, left: { style: 'thin' }, right: { style: 'thin' } }
+                    }};
+                });
+
+                dados.forEach((row, rowIndex) => {
+                    const excelRow = dataStartRow + rowIndex;
+                    const isEven = rowIndex % 2 === 0;
+                    const fillColor = isEven ? 'FFFFFF' : 'F2F2F2';
+                    const pesoLiquidoLinha = Number(row.pesoLiquido) || 0;
+
+                    const isDivergente = row.diferenca && Math.abs(row.diferenca) > 50;
+                    const divergenciaColor = isDivergente ? 'FFF2CC' : fillColor;
+
+                    const cellData = [
+                        { v: row.num, t: 'n' },
+                        { v: row.ticket, t: 's' },
+                        { v: row.notaFiscal, t: 's' },
+                        { v: row.dataEntrada, t: 'd' },
+                        { v: row.dataSaida, t: 'd' },
+                        { v: row.placa, t: 's' },
+                        { v: row.motorista, t: 's' },
+                        { v: row.cliente, t: 's' },
+                        { v: row.transportadora, t: 's' },
+                        { v: row.obra, t: 's' },
+                        { v: row.produto, t: 's' },
+                        { v: row.certificado, t: 's' },
+                        { v: row.pesoBruto, t: 'n' },
+                        { v: row.tara, t: 'n' },
+                        { v: row.pesoLiquido, t: 'n' },
+                        { v: row.pesoNota, t: row.pesoNota ? 'n' : 's' },
+                        { v: row.diferenca, t: row.diferenca ? 'n' : 's' },
+                        { v: row.percentual, t: row.percentual ? 'n' : 's' },
+                        { v: row.observacao, t: 's' }
+                    ];
+
+                    cellData.forEach((cell, colIndex) => {
+                        const cellAddr = XLSX.utils.encode_cell({ r: excelRow, c: colIndex });
+                        const cellStyle = {
+                            font: { name: 'Calibri', sz: 10 },
+                            alignment: { vertical: 'center', horizontal: colIndex <= 11 || colIndex >= 18 ? 'left' : 'center' },
+                            fill: { patternType: 'solid', fgColor: { rgb: colIndex >= 16 && colIndex <= 17 ? divergenciaColor : fillColor } },
+                            border: { top: { style: 'thin', color: { rgb: 'D9D9D9' } }, bottom: { style: 'thin', color: { rgb: 'D9D9D9' } }, left: { style: 'thin', color: { rgb: 'D9D9D9' } }, right: { style: 'thin', color: { rgb: 'D9D9D9' } } }
+                        };
+
+                        if (cell.t === 'n' && colIndex >= 12 && colIndex <= 17) {
+                            cellStyle.numFmt = '#,##0';
+                            if (colIndex === 17 && cell.v !== '') cellStyle.numFmt = '0.00"%"';
+                        }
+
+                        if (cell.t === 'd') {
+                            cellStyle.numFmt = 'dd/mm/yyyy hh:mm';
+                        }
+
+                        if (colIndex === 16 && cell.v < 0) {
+                            cellStyle.font.color = { rgb: 'FF0000' };
+                            cellStyle.font.bold = true;
+                        }
+
+                        if (colIndex === 17 && typeof cell.v === 'number') {
+                            const percentualAbs = Math.abs(cell.v);
+                            if (percentualAbs > 5) {
+                                cellStyle.fill = { patternType: 'solid', fgColor: { rgb: 'FFC7CE' } };
+                                cellStyle.font.color = { rgb: '9C0006' };
+                                cellStyle.font.bold = true;
+                            } else if (percentualAbs > 2) {
+                                cellStyle.fill = { patternType: 'solid', fgColor: { rgb: 'FFEB9C' } };
+                                cellStyle.font.color = { rgb: '9C6500' };
+                            } else {
+                                cellStyle.fill = { patternType: 'solid', fgColor: { rgb: 'C6EFCE' } };
+                                cellStyle.font.color = { rgb: '006100' };
+                            }
+                        }
+
+                        if (colIndex >= 12 && colIndex <= 14) {
+                            if (pesoLiquidoLinha >= 20000) {
+                                cellStyle.fill = { patternType: 'solid', fgColor: { rgb: 'C6EFCE' } };
+                                cellStyle.font.color = { rgb: '006100' };
+                                cellStyle.font.bold = true;
+                            } else if (pesoLiquidoLinha < 5000) {
+                                cellStyle.fill = { patternType: 'solid', fgColor: { rgb: 'FFC7CE' } };
+                                cellStyle.font.color = { rgb: '9C0006' };
+                            } else {
+                                cellStyle.fill = { patternType: 'solid', fgColor: { rgb: 'FFEB9C' } };
+                                cellStyle.font.color = { rgb: '9C6500' };
+                            }
+                        }
+
+                        ws[cellAddr] = { t: cell.t, v: cell.v, s: cellStyle };
+                    });
+                });
+
+                const totalRow = dataStartRow + dados.length;
+                const diferencaTotal = totalPesoNota > 0 ? (totalPesoLiquido - totalPesoNota) : '';
+                const percentualTotal = totalPesoNota > 0 ? (((totalPesoLiquido - totalPesoNota) / totalPesoNota) * 100) : '';
+                const firstDataExcelRow = dataStartRow + 1;
+                const lastDataExcelRow = dataStartRow + dados.length;
+                const totalExcelRow = totalRow + 1;
+                const colBruto = XLSX.utils.encode_col(12);
+                const colTara = XLSX.utils.encode_col(13);
+                const colLiquido = XLSX.utils.encode_col(14);
+                const colPesoNota = XLSX.utils.encode_col(15);
+
+                const totaisData = [
+                    { v: '', t: 's' },
+                    { v: '⭐ TOTAIS (SOMA)', t: 's' },
+                    { v: '', t: 's' },
+                    { v: '', t: 's' },
+                    { v: '', t: 's' },
+                    { v: '', t: 's' },
+                    { v: '', t: 's' },
+                    { v: '', t: 's' },
+                    { v: '', t: 's' },
+                    { v: '', t: 's' },
+                    { v: '', t: 's' },
+                    { v: '', t: 's' },
+                    { t: 'n', f: `SUM(${colBruto}${firstDataExcelRow}:${colBruto}${lastDataExcelRow})` },
+                    { t: 'n', f: `SUM(${colTara}${firstDataExcelRow}:${colTara}${lastDataExcelRow})` },
+                    { t: 'n', f: `SUM(${colLiquido}${firstDataExcelRow}:${colLiquido}${lastDataExcelRow})` },
+                    { t: totalPesoNota > 0 ? 'n' : 's', ...(totalPesoNota > 0 ? { f: `SUM(${colPesoNota}${firstDataExcelRow}:${colPesoNota}${lastDataExcelRow})` } : { v: '' }) },
+                    { t: diferencaTotal ? 'n' : 's', ...(diferencaTotal ? { f: `${colLiquido}${totalExcelRow}-${colPesoNota}${totalExcelRow}` } : { v: '' }) },
+                    { t: percentualTotal ? 'n' : 's', ...(percentualTotal ? { f: `IF(${colPesoNota}${totalExcelRow}=0,0,(${colLiquido}${totalExcelRow}-${colPesoNota}${totalExcelRow})/${colPesoNota}${totalExcelRow})` } : { v: '' }) },
+                    { v: `${pesagens.length} viagens`, t: 's' }
+                ];
+
+                totaisData.forEach((cell, colIndex) => {
+                    const cellAddr = XLSX.utils.encode_cell({ r: totalRow, c: colIndex });
+                    const cellStyle = {
+                        font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
+                        alignment: { vertical: 'center', horizontal: 'center' },
+                        fill: { patternType: 'solid', fgColor: { rgb: '1F4788' } },
+                        border: { top: { style: 'medium' }, bottom: { style: 'medium' }, left: { style: 'thin' }, right: { style: 'thin' } }
+                    };
+                    
+                    if (cell.t === 'n') {
+                        cellStyle.numFmt = '#,##0';
+                        if (colIndex === 17) cellStyle.numFmt = '0.00"%"';
+                    }
+
+                    ws[cellAddr] = { t: cell.t, v: cell.v, s: cellStyle };
+                });
+
+                const rankingStartRow = totalRow + 2;
+                ws[`A${rankingStartRow}`] = { t: 's', v: '🏆 RANKING MENSAL (TOP 5)', s: {
+                    font: { name: 'Calibri', sz: 12, bold: true, color: { rgb: 'FFFFFF' } },
+                    alignment: { vertical: 'center', horizontal: 'center' },
+                    fill: { patternType: 'solid', fgColor: { rgb: '1F4788' } },
+                    border: { top: { style: 'medium' }, bottom: { style: 'medium' }, left: { style: 'medium' }, right: { style: 'medium' } }
+                }};
+
+                const rankingHeaderRow = rankingStartRow + 1;
+                const rankingHeaders = [
+                    { col: 'A', value: 'Produto' },
+                    { col: 'B', value: 'Viagens' },
+                    { col: 'C', value: 'Peso Líquido (kg)' },
+                    { col: 'E', value: 'Transportadora' },
+                    { col: 'F', value: 'Viagens' },
+                    { col: 'G', value: 'Peso Líquido (kg)' }
+                ];
+
+                rankingHeaders.forEach(({ col, value }) => {
+                    ws[`${col}${rankingHeaderRow}`] = { t: 's', v: value, s: {
+                        font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: 'FFFFFF' } },
+                        alignment: { vertical: 'center', horizontal: 'center' },
+                        fill: { patternType: 'solid', fgColor: { rgb: '0D9488' } },
+                        border: { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } }
+                    }};
+                });
+
+                const maxRankingRows = Math.max(produtosRanking.length, transportadorasRanking.length, 5);
+                for (let i = 0; i < maxRankingRows; i++) {
+                    const row = rankingHeaderRow + 1 + i;
+                    const zebra = i % 2 === 0 ? 'FFFFFF' : 'F8FAFC';
+                    const produto = produtosRanking[i];
+                    const transportadora = transportadorasRanking[i];
+
+                    const estiloBase = {
+                        font: { name: 'Calibri', sz: 10 },
+                        alignment: { vertical: 'center', horizontal: 'left' },
+                        fill: { patternType: 'solid', fgColor: { rgb: zebra } },
+                        border: { top: { style: 'thin', color: { rgb: 'D9D9D9' } }, bottom: { style: 'thin', color: { rgb: 'D9D9D9' } }, left: { style: 'thin', color: { rgb: 'D9D9D9' } }, right: { style: 'thin', color: { rgb: 'D9D9D9' } } }
+                    };
+
+                    ws[`A${row}`] = { t: 's', v: produto ? produto[0] : '-', s: estiloBase };
+                    ws[`B${row}`] = { t: 'n', v: produto ? produto[1].viagens : 0, s: { ...estiloBase, alignment: { vertical: 'center', horizontal: 'center' }, numFmt: '#,##0' } };
+                    ws[`C${row}`] = { t: 'n', v: produto ? produto[1].peso : 0, s: { ...estiloBase, alignment: { vertical: 'center', horizontal: 'right' }, numFmt: '#,##0' } };
+
+                    ws[`E${row}`] = { t: 's', v: transportadora ? transportadora[0] : '-', s: estiloBase };
+                    ws[`F${row}`] = { t: 'n', v: transportadora ? transportadora[1].viagens : 0, s: { ...estiloBase, alignment: { vertical: 'center', horizontal: 'center' }, numFmt: '#,##0' } };
+                    ws[`G${row}`] = { t: 'n', v: transportadora ? transportadora[1].peso : 0, s: { ...estiloBase, alignment: { vertical: 'center', horizontal: 'right' }, numFmt: '#,##0' } };
+                }
+
+                const resumoOperacionalStartRow = rankingHeaderRow + maxRankingRows + 2;
+                ws[`A${resumoOperacionalStartRow}`] = { t: 's', v: '🚛 CARRETAS POR FORNECEDOR', s: {
+                    font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
+                    alignment: { vertical: 'center', horizontal: 'center' },
+                    fill: { patternType: 'solid', fgColor: { rgb: '1F4788' } },
+                    border: { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } }
+                }};
+                ws[`F${resumoOperacionalStartRow}`] = { t: 's', v: '📦 PESO TOTAL POR PRODUTO', s: {
+                    font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
+                    alignment: { vertical: 'center', horizontal: 'center' },
+                    fill: { patternType: 'solid', fgColor: { rgb: '1F4788' } },
+                    border: { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } }
+                }};
+
+                const resumoOpHeaderRow = resumoOperacionalStartRow + 1;
+                const headerStyleResumoOp = {
+                    font: { name: 'Calibri', sz: 10, bold: true, color: { rgb: 'FFFFFF' } },
+                    alignment: { vertical: 'center', horizontal: 'center' },
+                    fill: { patternType: 'solid', fgColor: { rgb: '0D9488' } },
+                    border: { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } }
+                };
+
+                ws[`A${resumoOpHeaderRow}`] = { t: 's', v: 'Fornecedor', s: headerStyleResumoOp };
+                ws[`B${resumoOpHeaderRow}`] = { t: 's', v: 'Viagens', s: headerStyleResumoOp };
+                ws[`C${resumoOpHeaderRow}`] = { t: 's', v: 'Carretas', s: headerStyleResumoOp };
+                ws[`D${resumoOpHeaderRow}`] = { t: 's', v: 'Peso Líquido (kg)', s: headerStyleResumoOp };
+                ws[`F${resumoOpHeaderRow}`] = { t: 's', v: 'Produto', s: headerStyleResumoOp };
+                ws[`G${resumoOpHeaderRow}`] = { t: 's', v: 'Viagens', s: headerStyleResumoOp };
+                ws[`H${resumoOpHeaderRow}`] = { t: 's', v: 'Peso Líquido (kg)', s: headerStyleResumoOp };
+
+                const resumoRows = Math.max(fornecedoresResumo.length, produtosResumo.length, 5);
+                for (let i = 0; i < resumoRows; i++) {
+                    const row = resumoOpHeaderRow + 1 + i;
+                    const zebra = i % 2 === 0 ? 'FFFFFF' : 'F8FAFC';
+                    const baseStyle = {
+                        font: { name: 'Calibri', sz: 10 },
+                        alignment: { vertical: 'center', horizontal: 'left' },
+                        fill: { patternType: 'solid', fgColor: { rgb: zebra } },
+                        border: { top: { style: 'thin', color: { rgb: 'D9D9D9' } }, bottom: { style: 'thin', color: { rgb: 'D9D9D9' } }, left: { style: 'thin', color: { rgb: 'D9D9D9' } }, right: { style: 'thin', color: { rgb: 'D9D9D9' } } }
+                    };
+
+                    const forn = fornecedoresResumo[i];
+                    ws[`A${row}`] = { t: 's', v: forn ? forn.nome : '-', s: baseStyle };
+                    ws[`B${row}`] = { t: 'n', v: forn ? forn.viagens : 0, s: { ...baseStyle, alignment: { vertical: 'center', horizontal: 'center' }, numFmt: '#,##0' } };
+                    ws[`C${row}`] = { t: 'n', v: forn ? forn.carretas : 0, s: { ...baseStyle, alignment: { vertical: 'center', horizontal: 'center' }, numFmt: '#,##0' } };
+                    ws[`D${row}`] = { t: 'n', v: forn ? forn.peso : 0, s: { ...baseStyle, alignment: { vertical: 'center', horizontal: 'right' }, numFmt: '#,##0' } };
+
+                    const prod = produtosResumo[i];
+                    ws[`F${row}`] = { t: 's', v: prod ? prod.nome : '-', s: baseStyle };
+                    ws[`G${row}`] = { t: 'n', v: prod ? prod.viagens : 0, s: { ...baseStyle, alignment: { vertical: 'center', horizontal: 'center' }, numFmt: '#,##0' } };
+                    ws[`H${row}`] = { t: 'n', v: prod ? prod.peso : 0, s: { ...baseStyle, alignment: { vertical: 'center', horizontal: 'right' }, numFmt: '#,##0' } };
+                }
+
+                const assinaturaRow = resumoOpHeaderRow + resumoRows + 2;
+                ws[`A${assinaturaRow}`] = { t: 's', v: `Relatório gerado por: ${this.state.userDoc?.nome || this.state.currentUser?.email || 'Sistema'}`, s: {
+                    font: { name: 'Calibri', sz: 10, italic: true, color: { rgb: '666666' } },
+                    alignment: { vertical: 'center', horizontal: 'left' }
+                }};
+                ws[`A${assinaturaRow + 1}`] = { t: 's', v: `Divergências acima de 5%: ${divergenciasQtd} de ${pesagensComNota.length} pesagens com nota fiscal`, s: {
+                    font: { name: 'Calibri', sz: 10, italic: true, color: { rgb: '666666' } },
+                    alignment: { vertical: 'center', horizontal: 'left' }
+                }};
+
+                ws['!cols'] = [
+                    { wch: 6 }, { wch: 12 }, { wch: 15 }, { wch: 18 }, { wch: 18 },
+                    { wch: 12 }, { wch: 25 }, { wch: 28 }, { wch: 30 }, { wch: 22 },
+                    { wch: 28 }, { wch: 16 }, { wch: 16 }, { wch: 14 }, { wch: 18 },
+                    { wch: 16 }, { wch: 14 }, { wch: 12 }, { wch: 45 }
+                ];
+
+                ws['!autofilter'] = { ref: `A${dataStartRow - 1}:S${totalRow}` };
+                ws['!freeze'] = { xSplit: 0, ySplit: dataStartRow, topLeftCell: `A${dataStartRow + 1}`, state: 'frozen' };
+
+                if (!ws['!merges']) ws['!merges'] = [];
+                ws['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 8 } });
+                ws['!merges'].push({ s: { r: 1, c: 0 }, e: { r: 1, c: 8 } });
+                ws['!merges'].push({ s: { r: 2, c: 0 }, e: { r: 2, c: 8 } });
+                ws['!merges'].push({ s: { r: 3, c: 0 }, e: { r: 3, c: 8 } });
+                ws['!merges'].push({ s: { r: 5, c: 0 }, e: { r: 5, c: 8 } });
+                ws['!merges'].push({ s: { r: rankingStartRow - 1, c: 0 }, e: { r: rankingStartRow - 1, c: 6 } });
+                ws['!merges'].push({ s: { r: resumoOperacionalStartRow - 1, c: 0 }, e: { r: resumoOperacionalStartRow - 1, c: 3 } });
+                ws['!merges'].push({ s: { r: resumoOperacionalStartRow - 1, c: 5 }, e: { r: resumoOperacionalStartRow - 1, c: 7 } });
+                
+                ws['!ref'] = `A1:S${assinaturaRow + 1}`;
+
+                XLSX.utils.book_append_sheet(wb, ws, "Pesagens");
+
+                const normalizarNomeAba = (nome, indice, usados) => {
+                    const baseLimpa = String(nome || 'Sem Fornecedor')
+                        .replace(/[\\/:?*\[\]]/g, ' ')
+                        .replace(/\s+/g, ' ')
+                        .trim() || 'Sem Fornecedor';
+
+                    let nomeAba = (`Forn - ${baseLimpa}`).slice(0, 31);
+                    if (!usados.has(nomeAba)) {
+                        usados.add(nomeAba);
+                        return nomeAba;
+                    }
+
+                    let sufixo = 2;
+                    while (true) {
+                        const tentativa = `${(`Forn - ${baseLimpa}`).slice(0, 27)}_${sufixo}`.slice(0, 31);
+                        if (!usados.has(tentativa)) {
+                            usados.add(tentativa);
+                            return tentativa;
+                        }
+                        sufixo++;
+                    }
+                };
+
+                const dadosPorFornecedor = dados.reduce((acc, item) => {
+                    const fornecedor = (item.cliente && String(item.cliente).trim()) ? String(item.cliente).trim() : 'Sem Fornecedor';
+                    if (!acc[fornecedor]) acc[fornecedor] = [];
+                    acc[fornecedor].push(item);
+                    return acc;
+                }, {});
+
+                const nomesAbasUsados = new Set(['Pesagens']);
+                const fornecedores = Object.keys(dadosPorFornecedor).sort((a, b) => a.localeCompare(b, 'pt-BR', { sensitivity: 'base' }));
+
+                fornecedores.forEach((fornecedor, idx) => {
+                    const linhasFornecedor = dadosPorFornecedor[fornecedor];
+                    const totalFornecedorBruto = linhasFornecedor.reduce((acc, i) => acc + (Number(i.pesoBruto) || 0), 0);
+                    const totalFornecedorTara = linhasFornecedor.reduce((acc, i) => acc + (Number(i.tara) || 0), 0);
+                    const totalFornecedorLiquido = linhasFornecedor.reduce((acc, i) => acc + (Number(i.pesoLiquido) || 0), 0);
+                    const totalFornecedorNota = linhasFornecedor.reduce((acc, i) => acc + (Number(i.pesoNota) || 0), 0);
+                    const mediaPesoLiquidoForn = linhasFornecedor.length > 0 ? totalFornecedorLiquido / linhasFornecedor.length : 0;
+                    const carretasForn = new Set(linhasFornecedor.map(i => String(i.placa || '').trim().toUpperCase()).filter(Boolean)).size;
+
+                    const gruposProduto = linhasFornecedor.reduce((acc, i) => {
+                        const nomeProduto = (i.produto && String(i.produto).trim()) ? String(i.produto).trim() : 'N/A';
+                        if (!acc[nomeProduto]) acc[nomeProduto] = [];
+                        acc[nomeProduto].push(i);
+                        return acc;
+                    }, {});
+
+                    // Monta a lista de linhas de dados com um "tipo" para estilizar depois
+                    // tipo: 'produto' | 'data' | 'subtotal' | 'espaco' | 'total'
+                    const linhasComTipo = [];
+                    const produtosFornecedor = Object.keys(gruposProduto).sort((a, b) => a.localeCompare(b, 'pt-BR', { sensitivity: 'base' }));
+
+                    produtosFornecedor.forEach((produtoNome) => {
+                        const linhasProduto = gruposProduto[produtoNome].sort((a, b) => String(a.ticket).localeCompare(String(b.ticket), 'pt-BR', { sensitivity: 'base' }));
+                        const subtotalBruto = linhasProduto.reduce((acc, i) => acc + (Number(i.pesoBruto) || 0), 0);
+                        const subtotalTara = linhasProduto.reduce((acc, i) => acc + (Number(i.tara) || 0), 0);
+                        const subtotalLiquido = linhasProduto.reduce((acc, i) => acc + (Number(i.pesoLiquido) || 0), 0);
+                        const subtotalNota = linhasProduto.reduce((acc, i) => acc + (Number(i.pesoNota) || 0), 0);
+
+                        linhasComTipo.push({
+                            tipo: 'produto',
+                            dados: {
+                                'Nº Ticket': `📦 PRODUTO: ${produtoNome}`,
+                                'Data Entrada': '', 'Data Saída': '', 'Placa': '', 'Motorista': '',
+                                'Produto': produtoNome, 'Transportadora': '',
+                                'Peso Bruto (kg)': '', 'Tara (kg)': '', 'Peso Líquido (kg)': '',
+                                'Peso Nota (kg)': '', '⚖️ Dif. (kg)': '', '📈 Dif. (%)': '', 'Observação': ''
+                            }
+                        });
+
+                        linhasProduto.forEach(i => {
+                            linhasComTipo.push({
+                                tipo: 'data',
+                                dados: {
+                                    'Nº Ticket': i.ticket,
+                                    'Data Entrada': i.dataEntrada,
+                                    'Data Saída': i.dataSaida,
+                                    'Placa': i.placa,
+                                    'Motorista': i.motorista,
+                                    'Produto': i.produto,
+                                    'Transportadora': i.transportadora,
+                                    'Peso Bruto (kg)': i.pesoBruto,
+                                    'Tara (kg)': i.tara,
+                                    'Peso Líquido (kg)': i.pesoLiquido,
+                                    'Peso Nota (kg)': i.pesoNota,
+                                    '⚖️ Dif. (kg)': i.diferenca,
+                                    '📈 Dif. (%)': i.percentual,
+                                    'Observação': i.observacao
+                                }
+                            });
+                        });
+
+                        linhasComTipo.push({
+                            tipo: 'subtotal',
+                            dados: {
+                                'Nº Ticket': `Subtotal ${produtoNome}`,
+                                'Data Entrada': '', 'Data Saída': '', 'Placa': '',
+                                'Motorista': `${linhasProduto.length} viagens`,
+                                'Produto': produtoNome,
+                                'Transportadora': '',
+                                'Peso Bruto (kg)': subtotalBruto,
+                                'Tara (kg)': subtotalTara,
+                                'Peso Líquido (kg)': subtotalLiquido,
+                                'Peso Nota (kg)': subtotalNota > 0 ? subtotalNota : '',
+                                '⚖️ Dif. (kg)': subtotalNota > 0 ? (subtotalLiquido - subtotalNota) : '',
+                                '📈 Dif. (%)': subtotalNota > 0 ? (((subtotalLiquido - subtotalNota) / subtotalNota) * 100) : '',
+                                'Observação': ''
+                            }
+                        });
+
+                        linhasComTipo.push({ tipo: 'espaco', dados: {
+                            'Nº Ticket': '', 'Data Entrada': '', 'Data Saída': '', 'Placa': '', 'Motorista': '',
+                            'Produto': '', 'Transportadora': '', 'Peso Bruto (kg)': '', 'Tara (kg)': '',
+                            'Peso Líquido (kg)': '', 'Peso Nota (kg)': '', '⚖️ Dif. (kg)': '', '📈 Dif. (%)': '', 'Observação': ''
+                        }});
+                    });
+
+                    linhasComTipo.push({
+                        tipo: 'total',
+                        dados: {
+                            'Nº Ticket': '⭐ TOTAIS',
+                            'Data Entrada': '', 'Data Saída': '', 'Placa': '',
+                            'Motorista': `${linhasFornecedor.length} viagens`,
+                            'Produto': '', 'Transportadora': '',
+                            'Peso Bruto (kg)': totalFornecedorBruto,
+                            'Tara (kg)': totalFornecedorTara,
+                            'Peso Líquido (kg)': totalFornecedorLiquido,
+                            'Peso Nota (kg)': totalFornecedorNota > 0 ? totalFornecedorNota : '',
+                            '⚖️ Dif. (kg)': totalFornecedorNota > 0 ? (totalFornecedorLiquido - totalFornecedorNota) : '',
+                            '📈 Dif. (%)': totalFornecedorNota > 0 ? (((totalFornecedorLiquido - totalFornecedorNota) / totalFornecedorNota) * 100) : '',
+                            'Observação': ''
+                        }
+                    });
+
+                    // ===== MONTAGEM DA PLANILHA COM CABEÇALHO PROFISSIONAL =====
+                    const wsFornecedor = XLSX.utils.aoa_to_sheet([]);
+                    const tituloAba = `Relatório por Fornecedor — ${fornecedor}`;
+
+                    // Linha 1 – título azul
+                    wsFornecedor['A1'] = { t: 's', v: tituloAba, s: {
+                        font: { name: 'Calibri', sz: 18, bold: true, color: { rgb: 'FFFFFF' } },
+                        alignment: { vertical: 'center', horizontal: 'center' },
+                        fill: { patternType: 'solid', fgColor: { rgb: '1F4788' } },
+                        border: { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } }
+                    }};
+                    // Linha 2 – nome empresa
+                    wsFornecedor['A2'] = { t: 's', v: config.nome || 'Empresa', s: {
+                        font: { name: 'Calibri', sz: 14, bold: true },
+                        alignment: { vertical: 'center', horizontal: 'center' },
+                        fill: { patternType: 'solid', fgColor: { rgb: 'D9E1F2' } },
+                        border: { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } }
+                    }};
+                    // Linha 3 – período
+                    wsFornecedor['A3'] = { t: 's', v: periodo, s: {
+                        font: { name: 'Calibri', sz: 11 },
+                        alignment: { vertical: 'center', horizontal: 'left' },
+                        fill: { patternType: 'solid', fgColor: { rgb: 'F2F2F2' } }
+                    }};
+                    // Linha 4 – geração
+                    wsFornecedor['A4'] = { t: 's', v: `Gerado em: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}`, s: {
+                        font: { name: 'Calibri', sz: 10, italic: true },
+                        alignment: { vertical: 'center', horizontal: 'left' },
+                        fill: { patternType: 'solid', fgColor: { rgb: 'F2F2F2' } }
+                    }};
+
+                    // Linha 6 – faixa "RESUMO DO FORNECEDOR"
+                    wsFornecedor['A6'] = { t: 's', v: '📊 RESUMO DO FORNECEDOR', s: {
+                        font: { name: 'Calibri', sz: 14, bold: true, color: { rgb: 'FFFFFF' } },
+                        alignment: { vertical: 'center', horizontal: 'center' },
+                        fill: { patternType: 'solid', fgColor: { rgb: '0D9488' } },
+                        border: { top: { style: 'medium' }, bottom: { style: 'medium' }, left: { style: 'medium' }, right: { style: 'medium' } }
+                    }};
+
+                    // Linhas 7-8 – KPIs
+                    const kpiLabel = (v) => ({ t: 's', v, s: { font: { bold: true }, alignment: { horizontal: 'right' }, fill: { patternType: 'solid', fgColor: { rgb: 'E7E6E6' } } } });
+                    const kpiValue = (v, fmt = '#,##0') => ({ t: 'n', v, s: { font: { bold: true, color: { rgb: '0D9488' } }, alignment: { horizontal: 'center' }, fill: { patternType: 'solid', fgColor: { rgb: 'E7E6E6' } }, numFmt: fmt } });
+                    wsFornecedor['A7'] = kpiLabel('Total de Viagens:');
+                    wsFornecedor['B7'] = kpiValue(linhasFornecedor.length);
+                    wsFornecedor['D7'] = kpiLabel('Peso Bruto Total (kg):');
+                    wsFornecedor['E7'] = kpiValue(totalFornecedorBruto);
+                    wsFornecedor['A8'] = kpiLabel('Peso Líquido Total (kg):');
+                    wsFornecedor['B8'] = kpiValue(totalFornecedorLiquido);
+                    wsFornecedor['D8'] = kpiLabel('Tara Total (kg):');
+                    wsFornecedor['E8'] = kpiValue(totalFornecedorTara);
+                    wsFornecedor['A9'] = kpiLabel('Média/Viagem (kg):');
+                    wsFornecedor['B9'] = kpiValue(mediaPesoLiquidoForn);
+                    wsFornecedor['D9'] = kpiLabel('Carretas Diferentes:');
+                    wsFornecedor['E9'] = kpiValue(carretasForn);
+
+                    // Linha 11 (vazia) / Linha 12 – cabeçalho da tabela
+                    const dataStartRowForn = 12; // 1-indexado
+                    const cabecalhosForn = ['Nº Ticket', 'Data Entrada', 'Data Saída', 'Placa', 'Motorista', 'Produto', 'Transportadora', 'Peso Bruto (kg)', 'Tara (kg)', 'Peso Líquido (kg)', 'Peso Nota (kg)', '⚖️ Dif. (kg)', '📈 Dif. (%)', 'Observação'];
+                    cabecalhosForn.forEach((header, colIndex) => {
+                        const cellAddr = XLSX.utils.encode_cell({ r: dataStartRowForn - 1, c: colIndex });
+                        wsFornecedor[cellAddr] = { t: 's', v: header, s: {
+                            font: { name: 'Calibri', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
+                            alignment: { vertical: 'center', horizontal: 'center', wrapText: true },
+                            fill: { patternType: 'solid', fgColor: { rgb: '0D9488' } },
+                            border: { top: { style: 'medium' }, bottom: { style: 'medium' }, left: { style: 'thin' }, right: { style: 'thin' } }
+                        }};
+                    });
+
+                    // ===== POPULAR LINHAS COM ESTILO POR TIPO =====
+                    const keysForn = cabecalhosForn;
+                    linhasComTipo.forEach((linha, linhaIdx) => {
+                        const excelRow = dataStartRowForn + linhaIdx;
+                        const isEven = linhaIdx % 2 === 0;
+                        const zebraFill = isEven ? 'FFFFFF' : 'F8FAFC';
+
+                        keysForn.forEach((key, colIndex) => {
+                            const cellAddr = XLSX.utils.encode_cell({ r: excelRow, c: colIndex });
+                            const valor = linha.dados[key];
+                            let tipo = 's';
+                            let tcell = valor;
+
+                            // Definir tipo da célula
+                            if (valor instanceof Date) {
+                                tipo = 'd';
+                            } else if (typeof valor === 'number') {
+                                tipo = 'n';
+                            } else if (valor === '' || valor == null) {
+                                tipo = 's';
+                                tcell = '';
+                            }
+
+                            // Estilo base conforme o tipo da LINHA
+                            let cellStyle;
+                            if (linha.tipo === 'produto') {
+                                cellStyle = {
+                                    font:      { name: 'Calibri', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
+                                    fill:      { patternType: 'solid', fgColor: { rgb: '0D9488' } },
+                                    alignment: { vertical: 'center', horizontal: colIndex === 0 ? 'left' : 'center', indent: colIndex === 0 ? 1 : 0 },
+                                    border:    { top: { style: 'thin' }, bottom: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' } }
+                                };
+                            } else if (linha.tipo === 'subtotal') {
+                                cellStyle = {
+                                    font:      { name: 'Calibri', sz: 10, bold: true, color: { rgb: '1F4788' } },
+                                    fill:      { patternType: 'solid', fgColor: { rgb: 'DCE6F1' } },
+                                    alignment: { vertical: 'center', horizontal: colIndex >= 7 && colIndex <= 12 ? 'right' : 'left' },
+                                    border:    { top: { style: 'medium', color: { rgb: '1F4788' } }, bottom: { style: 'medium', color: { rgb: '1F4788' } }, left: { style: 'thin' }, right: { style: 'thin' } }
+                                };
+                            } else if (linha.tipo === 'total') {
+                                cellStyle = {
+                                    font:      { name: 'Calibri', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
+                                    fill:      { patternType: 'solid', fgColor: { rgb: '1F4788' } },
+                                    alignment: { vertical: 'center', horizontal: colIndex >= 7 && colIndex <= 12 ? 'right' : 'center' },
+                                    border:    { top: { style: 'medium' }, bottom: { style: 'medium' }, left: { style: 'thin' }, right: { style: 'thin' } }
+                                };
+                            } else if (linha.tipo === 'espaco') {
+                                cellStyle = {
+                                    font:      { name: 'Calibri', sz: 10 },
+                                    fill:      { patternType: 'solid', fgColor: { rgb: 'FFFFFF' } },
+                                    alignment: { vertical: 'center', horizontal: 'left' }
+                                };
+                            } else { // 'data'
+                                cellStyle = {
+                                    font:      { name: 'Calibri', sz: 10 },
+                                    fill:      { patternType: 'solid', fgColor: { rgb: zebraFill } },
+                                    alignment: { vertical: 'center', horizontal: (colIndex <= 6 || colIndex === 13) ? 'left' : 'center' },
+                                    border:    { top: { style: 'thin', color: { rgb: 'D9D9D9' } }, bottom: { style: 'thin', color: { rgb: 'D9D9D9' } }, left: { style: 'thin', color: { rgb: 'D9D9D9' } }, right: { style: 'thin', color: { rgb: 'D9D9D9' } } }
+                                };
+                            }
+
+                            // Formato numérico/data
+                            if (tipo === 'n') {
+                                cellStyle.numFmt = '#,##0';
+                                if (colIndex === 12) cellStyle.numFmt = '0.00"%"'; // Diferença %
+                            }
+                            if (tipo === 'd') {
+                                cellStyle.numFmt = 'dd/mm/yyyy hh:mm';
+                            }
+
+                            // Destaque para diferença negativa (linhas de dados e subtotal)
+                            if ((linha.tipo === 'data' || linha.tipo === 'subtotal') && colIndex === 11 && typeof tcell === 'number' && tcell < 0) {
+                                cellStyle.font = { ...cellStyle.font, bold: true, color: { rgb: 'FF0000' } };
+                            }
+
+                            // Percentual colorido (só em linhas de dados)
+                            if (linha.tipo === 'data' && colIndex === 12 && typeof tcell === 'number') {
+                                const abs = Math.abs(tcell);
+                                if (abs > 5) {
+                                    cellStyle.fill = { patternType: 'solid', fgColor: { rgb: 'FFC7CE' } };
+                                    cellStyle.font = { ...cellStyle.font, color: { rgb: '9C0006' }, bold: true };
+                                } else if (abs > 2) {
+                                    cellStyle.fill = { patternType: 'solid', fgColor: { rgb: 'FFEB9C' } };
+                                    cellStyle.font = { ...cellStyle.font, color: { rgb: '9C6500' } };
+                                } else {
+                                    cellStyle.fill = { patternType: 'solid', fgColor: { rgb: 'C6EFCE' } };
+                                    cellStyle.font = { ...cellStyle.font, color: { rgb: '006100' } };
+                                }
+                            }
+
+                            wsFornecedor[cellAddr] = { t: tipo, v: tcell, s: cellStyle };
+                        });
+                    });
+
+                    // ===== LAYOUT DA PLANILHA (FORNECEDOR) =====
+                    wsFornecedor['!cols'] = [
+                        { wch: 18 }, { wch: 18 }, { wch: 18 }, { wch: 12 }, { wch: 25 },
+                        { wch: 25 }, { wch: 30 }, { wch: 16 }, { wch: 14 }, { wch: 18 },
+                        { wch: 16 }, { wch: 14 }, { wch: 12 }, { wch: 45 }
+                    ];
+                    const lastRowForn = dataStartRowForn + linhasComTipo.length - 1;
+                    wsFornecedor['!ref'] = `A1:N${lastRowForn}`;
+                    wsFornecedor['!autofilter'] = { ref: `A${dataStartRowForn}:N${lastRowForn}` };
+                    wsFornecedor['!freeze'] = { xSplit: 0, ySplit: dataStartRowForn, topLeftCell: `A${dataStartRowForn + 1}`, state: 'frozen' };
+
+                    // Mesclagens do cabeçalho
+                    wsFornecedor['!merges'] = [
+                        { s: { r: 0, c: 0 }, e: { r: 0, c: 13 } }, // Título
+                        { s: { r: 1, c: 0 }, e: { r: 1, c: 13 } }, // Empresa
+                        { s: { r: 2, c: 0 }, e: { r: 2, c: 13 } }, // Período
+                        { s: { r: 3, c: 0 }, e: { r: 3, c: 13 } }, // Geração
+                        { s: { r: 5, c: 0 }, e: { r: 5, c: 13 } }  // RESUMO DO FORNECEDOR
+                    ];
+
+                    const nomeAbaFornecedor = normalizarNomeAba(fornecedor, idx, nomesAbasUsados);
+                    XLSX.utils.book_append_sheet(wb, wsFornecedor, nomeAbaFornecedor);
+                });
+
+                XLSX.writeFile(wb, nomeArquivo);
+                
+                this.showNotification(`✅ Excel exportado com ${1 + fornecedores.length} aba(s)!`);
+                
+                this.registrarLog('exportou_excel', `Exportou relatório Excel Profissional: ${titulo}`, {
+                    nomeArquivo: nomeArquivo,
+                    totalRegistros: pesagens.length,
+                    pesoTotal: totalPesoLiquido,
+                    abasFornecedores: fornecedores.length
+                });
+            },
+            exportarControleAgregado() {
+                const nomeArquivo = this._gerarNomeRelatorio('xlsx').replace('relatorio', 'controle_agregado');
+                const dados = this.getFilteredPesagens().map(p => ({
+                    'Data Entrada': new Date(p.dataEntrada.seconds * 1000),
+                    'Fornecedor': p.cliente, 'Transportadora': p.transportadora || 'N/A', 'Razão Social': p.razaoSocial || 'N/A', 'CNPJ': this.state.config.cnpj,
+                    'Descrição Nota': p.produto, 'Ordem de Compra': '', 'Nº Ticket Interno': p.num,
+                    'Nº Nota Fiscal': this.formatarNotasFiscais(p.notaFiscal, p.notaFiscal2), 'Data Fiscal': '', 'Quant. Declarada (NF)': (p.pesoLiquido || 0) / 1000,
+                    'Quant. Recebida (NF)': (p.pesoLiquido || 0) / 1000, 'Valor Unitário (R$)': '', 'Valor Total (R$)': '',
+                    'Centro de Custo': '', 'Status da Entrega': 'Entregue',
+                }));
+
+                if (dados.length === 0) { this.showNotification("⚠️ Nenhum dado para exportar."); return; }
+
+                const ws = XLSX.utils.json_to_sheet(dados);
+
+                this._aplicarEstiloPlanilha(ws, {
+                    dateCols:    [0, 8],      // Data Entrada, Data Fiscal
+                    numericCols: [9, 10, 11, 12], // Quantidades e valores
+                    colWidths:   [14, 28, 28, 28, 20, 26, 16, 16, 14, 18, 18, 16, 16, 18, 18]
+                });
+
+                // Formato específico para as colunas de quantidade (com 3 casas decimais)
+                const range = XLSX.utils.decode_range(ws['!ref']);
+                for (let R = range.s.r + 1; R <= range.e.r; ++R) {
+                    for (const C of [9, 10]) {
+                        const ref = XLSX.utils.encode_cell({ c: C, r: R });
+                        if (ws[ref] && ws[ref].s) { ws[ref].s.numFmt = '#,##0.000'; }
+                    }
+                    for (const C of [0, 8]) {
+                        const ref = XLSX.utils.encode_cell({ c: C, r: R });
+                        if (ws[ref] && ws[ref].s) { ws[ref].s.numFmt = 'dd/mm/yyyy'; }
+                    }
+>>>>>>> 85d7f01ba704e3f7dc8ef8eaf26ae78dd379cab7
                 }
             };
         });
@@ -7217,14 +8919,99 @@ const App = {
                     'Data': new Date(p.dataEntrada.seconds * 1000).toLocaleDateString('pt-BR'),
                     'Placa': p.placa,
                     'Produto': p.produto,
+<<<<<<< HEAD
                     'Nota Fiscal': this.formatarNotasFiscais(p.notaFiscal, p.notaFiscal2),
                     'Peso Balança (kg)': pesoLiq,
                     'Peso Nota (kg)': pesoNF,
                     '⚖️ Diferença (kg)': Math.abs(diff).toFixed(2),
                     '📈 Diferença (%)': perc + '%'
+=======
+                    'Peso da Nota (kg)': p.pesoNota,
+                    'Peso Líquido (kg)': p.pesoLiquido,
+                    '⚖️ Diferença (kg)': p.pesoLiquido - p.pesoNota,
+                    '📈 Diferença (%)': (((p.pesoLiquido - p.pesoNota) / p.pesoNota) * 100).toFixed(2) + '%'
+                }));
+
+                const ws = XLSX.utils.json_to_sheet(dados);
+
+                this._aplicarEstiloPlanilha(ws, {
+                    numericCols: [5, 6, 7],   // Peso Nota, Peso Líquido, Diferença
+                    colWidths:   [12, 14, 14, 18, 28, 18, 20, 18, 18]
+                });
+
+                // Destacar linhas com diferença negativa em vermelho
+                const range = XLSX.utils.decode_range(ws['!ref']);
+                for (let R = 1; R <= range.e.r; R++) {
+                    const difRef = XLSX.utils.encode_cell({ c: 7, r: R });
+                    if (ws[difRef] && typeof ws[difRef].v === 'number' && ws[difRef].v < 0) {
+                        ws[difRef].s = {
+                            ...ws[difRef].s,
+                            font: { ...(ws[difRef].s?.font || {}), bold: true, color: { rgb: '9C0006' } },
+                            fill: { patternType: 'solid', fgColor: { rgb: 'FFC7CE' } }
+                        };
+                    }
+                }
+
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, "Divergências");
+                XLSX.writeFile(wb, `divergencias_${new Date().toISOString().slice(0,10)}.xlsx`);
+                
+                this.showNotification(`Exportadas ${divergencias.length} divergências! 📊`);
+            },
+
+            exportarRelatorioExcelMultiAbas() {
+                const titulo = this.dom.relatorioTitulo.value.trim() || 'Relatório Completo';
+                const nomeArquivo = `${titulo.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_completo_${new Date().getTime()}.xlsx`;
+                const pesagens = this.getFilteredPesagens();
+                const metrics = this.computeRelatorioMetrics(pesagens);
+                const config = this.state.config;
+
+                if (pesagens.length === 0) {
+                    this.showNotification("⚠️ Nenhum dado para exportar.");
+                    return;
+                }
+
+                const wb = XLSX.utils.book_new();
+
+                // Função helper para criar cabeçalho padrão (com estilos aplicados)
+                const criarCabecalho = (ws, tituloAba, currentRow = 0) => {
+                    XLSX.utils.sheet_add_aoa(ws, [[titulo]], { origin: 'A1' });
+                    currentRow++;
+                    XLSX.utils.sheet_add_aoa(ws, [[config.nome || 'Empresa']], { origin: 'A2' });
+                    currentRow++;
+                    
+                    const dataInicio = this.dom.filtroDataInicio.value;
+                    const dataFim = this.dom.filtroDataFim.value;
+                    let periodo = 'Período: Todos os registros';
+                    if (dataInicio && dataFim) { 
+                        periodo = `Período: ${new Date(dataInicio+'T00:00:00').toLocaleDateString('pt-BR')} a ${new Date(dataFim+'T00:00:00').toLocaleDateString('pt-BR')}`; 
+                    }
+                    XLSX.utils.sheet_add_aoa(ws, [[periodo]], { origin: 'A3' });
+                    currentRow++;
+                    XLSX.utils.sheet_add_aoa(ws, [[`Gerado em: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}`]], { origin: 'A4' });
+                    currentRow++;
+                    currentRow++; // Linha em branco
+                    XLSX.utils.sheet_add_aoa(ws, [[tituloAba]], { origin: `A${currentRow + 1}` });
+                    currentRow++;
+
+                    // Aplicar estilos nas linhas de cabeçalho
+                    if (ws['A1']) ws['A1'].s = this._estiloTituloFaixa(18);
+                    if (ws['A2']) ws['A2'].s = {
+                        font: { name: 'Calibri', sz: 14, bold: true, color: { rgb: '1F4788' } },
+                        fill: { patternType: 'solid', fgColor: { rgb: 'D9E1F2' } },
+                        alignment: { vertical: 'center', horizontal: 'center' }
+                    };
+                    if (ws['A3']) ws['A3'].s = this._estiloInfo();
+                    if (ws['A4']) ws['A4'].s = this._estiloInfo();
+                    const refAba = `A${currentRow}`;
+                    if (ws[refAba]) ws[refAba].s = this._estiloTituloFaixa(14);
+
+                    return currentRow + 1; // Retorna a linha onde os dados começam
+>>>>>>> 85d7f01ba704e3f7dc8ef8eaf26ae78dd379cab7
                 };
             });
 
+<<<<<<< HEAD
         if (divergenciasData.length > 0) {
             const wsData6 = XLSX.utils.json_to_sheet(divergenciasData, { origin: `A${dataRow6 + 7}` });
             Object.keys(wsData6).forEach(cell => { if (cell[0] !== '!') ws6[cell] = wsData6[cell]; });
@@ -7670,6 +9457,116 @@ const App = {
                     ws[sumCell] = {
                         t: 'n',
                         f: `SUM(${colLetter}${dataStartRow + 1}:${colLetter}${lastDataRow})`
+=======
+                // Helper para estilizar uma linha específica como cabeçalho de tabela
+                const estilizarLinhaCabecalho = (ws, row, colStart, colEnd) => {
+                    for (let c = colStart; c <= colEnd; c++) {
+                        const ref = XLSX.utils.encode_cell({ r: row, c });
+                        if (!ws[ref]) continue;
+                        ws[ref].s = {
+                            font:      { name: 'Calibri', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
+                            fill:      { patternType: 'solid', fgColor: { rgb: '0D9488' } },
+                            alignment: { vertical: 'center', horizontal: 'center', wrapText: true },
+                            border: {
+                                top:    { style: 'medium', color: { rgb: '000000' } },
+                                bottom: { style: 'medium', color: { rgb: '000000' } },
+                                left:   { style: 'thin', color: { rgb: 'FFFFFF' } },
+                                right:  { style: 'thin', color: { rgb: 'FFFFFF' } }
+                            }
+                        };
+                    }
+                };
+
+                // Helper para estilizar linhas de dados (com zebra)
+                const estilizarLinhasDados = (ws, rowStart, rowEnd, colStart, colEnd, { totalNaUltima = false } = {}) => {
+                    const theme = this._excelTheme;
+                    const thinBorder = {
+                        top:    { style: 'thin', color: { rgb: theme.borderColor } },
+                        bottom: { style: 'thin', color: { rgb: theme.borderColor } },
+                        left:   { style: 'thin', color: { rgb: theme.borderColor } },
+                        right:  { style: 'thin', color: { rgb: theme.borderColor } }
+                    };
+                    const dataEnd = totalNaUltima ? rowEnd - 1 : rowEnd;
+                    for (let r = rowStart; r <= dataEnd; r++) {
+                        const zebra = (r - rowStart) % 2 === 1
+                            ? { patternType: 'solid', fgColor: { rgb: theme.zebraDark } }
+                            : { patternType: 'solid', fgColor: { rgb: theme.zebraLight } };
+                        for (let c = colStart; c <= colEnd; c++) {
+                            const ref = XLSX.utils.encode_cell({ r, c });
+                            if (!ws[ref]) continue;
+                            const eNum = ws[ref].t === 'n' || typeof ws[ref].v === 'number';
+                            ws[ref].s = {
+                                font:      { name: 'Calibri', sz: 10 },
+                                fill:      zebra,
+                                alignment: { vertical: 'center', horizontal: eNum ? 'right' : 'left' },
+                                border:    thinBorder
+                            };
+                            if (eNum) ws[ref].s.numFmt = '#,##0';
+                        }
+                    }
+                    if (totalNaUltima) {
+                        for (let c = colStart; c <= colEnd; c++) {
+                            const ref = XLSX.utils.encode_cell({ r: rowEnd, c });
+                            if (!ws[ref]) continue;
+                            const eNum = ws[ref].t === 'n' || typeof ws[ref].v === 'number';
+                            ws[ref].s = {
+                                font:      { name: 'Calibri', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
+                                fill:      { patternType: 'solid', fgColor: { rgb: '1F4788' } },
+                                alignment: { vertical: 'center', horizontal: eNum ? 'right' : 'center' },
+                                border: {
+                                    top:    { style: 'medium', color: { rgb: '000000' } },
+                                    bottom: { style: 'medium', color: { rgb: '000000' } },
+                                    left:   { style: 'thin', color: { rgb: 'FFFFFF' } },
+                                    right:  { style: 'thin', color: { rgb: 'FFFFFF' } }
+                                }
+                            };
+                            if (eNum) ws[ref].s.numFmt = '#,##0';
+                        }
+                    }
+                };
+
+                // Helper para estilizar células de seção (ex.: "ESTATÍSTICAS GERAIS")
+                const estilizarSecao = (ws, ref) => {
+                    if (ws[ref]) ws[ref].s = this._estiloSecao();
+                };
+
+                // ===== ABA 1: DADOS COMPLETOS =====
+                const ws1 = XLSX.utils.aoa_to_sheet([]);
+                const dataRow1 = criarCabecalho(ws1, 'DADOS COMPLETOS', 0);
+                
+                const dadosCompletos = pesagens.map(p => {
+                    let obs = p.observacao || '';
+                    if (p.isPesagemDupla) { 
+                        obs += ` [P. Dupla: P1(${p.peso1_eixo1}+${p.peso1_eixo2}) P2(${p.peso2_eixo1}+${p.peso2_eixo2})]`; 
+                    }
+                    
+                    // Calcular diferença e porcentagem
+                    const pesoLiquido = Number(p.pesoLiquido) || 0;
+                    const pesoNota = Number(p.pesoNota) || 0;
+                    const diferenca = pesoNota > 0 ? (pesoLiquido - pesoNota) : '';
+                    const percentual = pesoNota > 0 ? (((pesoLiquido - pesoNota) / pesoNota) * 100).toFixed(2) : '';
+                    
+                    return {
+                        'Nº Ticket': p.num,
+                        'Nota Fiscal': this.formatarNotasFiscais(p.notaFiscal, p.notaFiscal2),
+                        'Data Entrada': new Date(p.dataEntrada.seconds * 1000),
+                        'Data Saída': new Date(p.dataSaida.seconds * 1000),
+                        'Placa': p.placa,
+                        'Motorista': p.motorista,
+                        'Cliente/Forn.': p.cliente,
+                        'Transportadora': p.transportadora || 'N/A',
+                        'Razão Social': p.razaoSocial || 'N/A',
+                        'Obra': p.obra,
+                        'Produto': p.produto,
+                        'Certificado': p.certificado,
+                        'Peso Bruto (kg)': p.pesoBruto,
+                        'Tara (kg)': p.tara,
+                        'Peso Líquido (kg)': p.pesoLiquido,
+                        'Peso Nota (kg)': pesoNota > 0 ? pesoNota : '',
+                        '⚖️ Diferença (kg)': diferenca,
+                        '📈 Diferença (%)': percentual,
+                        'Observação': obs.trim()
+>>>>>>> 85d7f01ba704e3f7dc8ef8eaf26ae78dd379cab7
                     };
                 });
             }
@@ -7687,6 +9584,7 @@ const App = {
         if (config.excelFormatting) {
             const pesoColIndex = headers.findIndex(h => h.includes('Peso Líquido'));
 
+<<<<<<< HEAD
             if (pesoColIndex !== -1) {
                 for (let R = dataStartRow; R <= lastDataRow; ++R) {
                     const cellAddress = XLSX.utils.encode_cell({ r: R, c: pesoColIndex });
@@ -7702,6 +9600,1039 @@ const App = {
                             cell.s = { fill: { fgColor: { rgb: "FFC7CE" } }, font: { color: { rgb: "9C0006" } } };
                         } else {
                             cell.s = { fill: { fgColor: { rgb: "FFEB9C" } }, font: { color: { rgb: "9C6500" } } };
+=======
+                const wsData1 = XLSX.utils.json_to_sheet(dadosCompletos, { origin: `A${dataRow1}` });
+                Object.keys(wsData1).forEach(cell => { if (cell[0] !== '!') ws1[cell] = wsData1[cell]; });
+                
+                ws1['!cols'] = [
+                    { wch: 19.80 }, { wch: 15 }, { wch: 20 }, { wch: 20 }, { wch: 14 }, { wch: 28 }, { wch: 30 },
+                    { wch: 35 }, { wch: 25 }, { wch: 30 }, { wch: 18 }, { wch: 18 }, { wch: 16 }, { wch: 20 }, 
+                    { wch: 18 }, { wch: 18 }, { wch: 18 }, { wch: 50 }
+                ];
+                ws1['!autofilter'] = { ref: `A${dataRow1}:R${dataRow1 + dadosCompletos.length - 1}` };
+                ws1['!freeze'] = { xSplit: 0, ySplit: dataRow1, topLeftCell: `A${dataRow1 + 1}`, state: 'frozen' };
+                if (!ws1['!merges']) ws1['!merges'] = [];
+                ws1['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 5 } });
+                ws1['!ref'] = `A1:R${dataRow1 + dadosCompletos.length - 1}`;
+                // Estilos: cabeçalho da tabela + linhas + total
+                estilizarLinhaCabecalho(ws1, dataRow1 - 1, 0, 17);
+                estilizarLinhasDados(ws1, dataRow1, dataRow1 + dadosCompletos.length - 1, 0, 17, { totalNaUltima: true });
+                XLSX.utils.book_append_sheet(wb, ws1, "Dados Completos");
+
+                // ===== ABA 2: RESUMO POR TRANSPORTADORA =====
+                const ws2 = XLSX.utils.aoa_to_sheet([]);
+                const dataRow2 = criarCabecalho(ws2, 'RESUMO POR TRANSPORTADORA', 0);
+                
+                XLSX.utils.sheet_add_aoa(ws2, [
+                    ['📊 ESTATÍSTICAS GERAIS'],
+                    ['Total de Viagens:', pesagens.length],
+                    ['Peso Total (kg):', totalLiquido],
+                    ['Peso Médio/Viagem:', Math.round(totalLiquido / pesagens.length)],
+                    [], // Linha em branco
+                    ['📋 DETALHAMENTO POR TRANSPORTADORA'],
+                    [], // Linha em branco
+                    ['#', 'Transportadora', 'Nº Viagens', 'Veículos', 'Peso Líquido (kg)', 'Peso Bruto (kg)', 'Tara (kg)', 'Peso Nota (kg)', '⚖️ Diferença (kg)', '📈 Diferença (%)', 'Média/Viagem (kg)', '% do Total']
+                ], { origin: `A${dataRow2}` });
+                
+                // Calcular dados por transportadora diretamente
+                const transportadorasCalc = pesagens.reduce((acc, p) => {
+                    const transp = p.transportadora || 'Não Informado';
+                    if (!acc[transp]) {
+                        acc[transp] = { 
+                            viagens: 0, 
+                            pesoLiquido: 0, 
+                            pesoBruto: 0, 
+                            tara: 0,
+                            pesoNota: 0,
+                            placas: new Set()
+                        };
+                    }
+                    acc[transp].viagens++;
+                    acc[transp].pesoLiquido += Number(p.pesoLiquido) || 0;
+                    acc[transp].pesoBruto += Number(p.pesoBruto) || 0;
+                    acc[transp].tara += Number(p.tara) || 0;
+                    acc[transp].pesoNota += Number(p.pesoNota) || 0;
+                    acc[transp].placas.add(p.placa);
+                    return acc;
+                }, {});
+                
+                const transportadorasData = Object.entries(transportadorasCalc)
+                    .sort(([, a], [, b]) => b.pesoLiquido - a.pesoLiquido)
+                    .map(([nome, valores], index) => {
+                        const diff = valores.pesoNota > 0 ? valores.pesoLiquido - valores.pesoNota : '';
+                        const perc = valores.pesoNota > 0 ? (((valores.pesoLiquido - valores.pesoNota) / valores.pesoNota) * 100).toFixed(1) : '';
+                        
+                        return [
+                            index + 1,
+                            nome,
+                            valores.viagens,
+                            valores.placas.size,
+                            Math.round(valores.pesoLiquido),
+                            Math.round(valores.pesoBruto),
+                            Math.round(valores.tara),
+                            valores.pesoNota > 0 ? Math.round(valores.pesoNota) : '-',
+                            diff !== '' ? diff.toFixed(0) : '-',
+                            perc !== '' ? perc + '%' : '-',
+                            Math.round(valores.pesoLiquido / valores.viagens),
+                            ((valores.pesoLiquido / totalLiquido) * 100).toFixed(1) + '%'
+                        ];
+                    });
+                
+                // Adicionar linha de totais
+                const totalTranspViagens = transportadorasData.reduce((acc, t) => acc + t[2], 0);
+                const totalTranspPesoLiq = transportadorasData.reduce((acc, t) => acc + (typeof t[4] === 'number' ? t[4] : 0), 0);
+                const totalTranspPesoBruto = transportadorasData.reduce((acc, t) => acc + (typeof t[5] === 'number' ? t[5] : 0), 0);
+                const totalTranspTara = transportadorasData.reduce((acc, t) => acc + (typeof t[6] === 'number' ? t[6] : 0), 0);
+                
+                transportadorasData.push([
+                    '',
+                    '⭐ TOTAIS',
+                    totalTranspViagens,
+                    '',
+                    totalTranspPesoLiq,
+                    totalTranspPesoBruto,
+                    totalTranspTara,
+                    '-',
+                    '-',
+                    '-',
+                    Math.round(totalTranspPesoLiq / totalTranspViagens),
+                    '100%'
+                ]);
+                
+                XLSX.utils.sheet_add_aoa(ws2, transportadorasData, { origin: `A${dataRow2 + 8}` });
+                
+                ws2['!cols'] = [
+                    { wch: 5 }, { wch: 40 }, { wch: 12 }, { wch: 10 }, { wch: 18 }, 
+                    { wch: 18 }, { wch: 14 }, { wch: 18 }, { wch: 18 }, { wch: 18 }, 
+                    { wch: 20 }, { wch: 14 }
+                ];
+                ws2['!autofilter'] = { ref: `A${dataRow2 + 7}:L${dataRow2 + 7 + transportadorasData.length - 1}` };
+                ws2['!freeze'] = { xSplit: 0, ySplit: dataRow2 + 7, topLeftCell: `A${dataRow2 + 8}`, state: 'frozen' };
+                if (!ws2['!merges']) ws2['!merges'] = [];
+                ws2['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 3 } });
+                ws2['!merges'].push({ s: { r: dataRow2, c: 0 }, e: { r: dataRow2, c: 5 } }); // Estatísticas
+                ws2['!merges'].push({ s: { r: dataRow2 + 5, c: 0 }, e: { r: dataRow2 + 5, c: 5 } }); // Detalhamento
+                ws2['!ref'] = `A1:L${dataRow2 + 8 + transportadorasData.length - 1}`;
+                // Estilos: seções, cabeçalho da tabela e linhas
+                estilizarSecao(ws2, `A${dataRow2}`);
+                estilizarSecao(ws2, `A${dataRow2 + 5}`);
+                estilizarLinhaCabecalho(ws2, dataRow2 + 6, 0, 11);
+                estilizarLinhasDados(ws2, dataRow2 + 7, dataRow2 + 7 + transportadorasData.length - 1, 0, 11, { totalNaUltima: true });
+                XLSX.utils.book_append_sheet(wb, ws2, "Por Transportadora");
+
+                // ===== ABA 3: RESUMO POR PRODUTO =====
+                const ws3 = XLSX.utils.aoa_to_sheet([]);
+                const dataRow3 = criarCabecalho(ws3, 'RESUMO POR PRODUTO', 0);
+                
+                XLSX.utils.sheet_add_aoa(ws3, [
+                    ['📊 ESTATÍSTICAS GERAIS'],
+                    ['Total de Carregamentos:', pesagens.length],
+                    ['Peso Total (kg):', totalLiquido],
+                    ['Peso Médio/Carregamento:', Math.round(totalLiquido / pesagens.length)],
+                    [], // Linha em branco
+                    ['📋 DETALHAMENTO POR PRODUTO'],
+                    [], // Linha em branco
+                    ['#', 'Produto', 'Nº Viagens', 'Transportadoras', 'Motoristas', 'Peso Líquido (kg)', 'Peso Bruto (kg)', 'Tara (kg)', 'Peso Nota (kg)', '⚖️ Diferença (kg)', '📈 Diferença (%)', 'Média/Viagem (kg)', '% do Total']
+                ], { origin: `A${dataRow3}` });
+                
+                const produtosData = pesagens.reduce((acc, p) => {
+                    const prod = p.produto || 'Não Informado';
+                    if (!acc[prod]) {
+                        acc[prod] = { 
+                            viagens: 0, 
+                            pesoLiquido: 0, 
+                            pesoBruto: 0,
+                            tara: 0,
+                            pesoNota: 0,
+                            transportadoras: new Set(),
+                            motoristas: new Set()
+                        };
+                    }
+                    acc[prod].viagens++;
+                    acc[prod].pesoLiquido += Number(p.pesoLiquido) || 0;
+                    acc[prod].pesoBruto += Number(p.pesoBruto) || 0;
+                    acc[prod].tara += Number(p.tara) || 0;
+                    acc[prod].pesoNota += Number(p.pesoNota) || 0;
+                    acc[prod].transportadoras.add(p.transportadora);
+                    acc[prod].motoristas.add(p.motorista);
+                    return acc;
+                }, {});
+                
+                const produtosSheet = Object.entries(produtosData)
+                    .sort(([, a], [, b]) => b.pesoLiquido - a.pesoLiquido)
+                    .map(([nome, dados], index) => {
+                        const diff = dados.pesoNota > 0 ? dados.pesoLiquido - dados.pesoNota : '';
+                        const perc = dados.pesoNota > 0 ? (((dados.pesoLiquido - dados.pesoNota) / dados.pesoNota) * 100).toFixed(1) : '';
+                        
+                        return [
+                            index + 1,
+                            nome,
+                            dados.viagens,
+                            dados.transportadoras.size,
+                            dados.motoristas.size,
+                            Math.round(dados.pesoLiquido),
+                            Math.round(dados.pesoBruto),
+                            Math.round(dados.tara),
+                            dados.pesoNota > 0 ? Math.round(dados.pesoNota) : '-',
+                            diff !== '' ? diff.toFixed(0) : '-',
+                            perc !== '' ? perc + '%' : '-',
+                            Math.round(dados.pesoLiquido / dados.viagens),
+                            ((dados.pesoLiquido / totalLiquido) * 100).toFixed(1) + '%'
+                        ];
+                    });
+                
+                // Adicionar linha de totais
+                const totalProdViagens = produtosSheet.reduce((acc, p) => acc + p[2], 0);
+                const totalProdPesoLiq = produtosSheet.reduce((acc, p) => acc + (typeof p[5] === 'number' ? p[5] : 0), 0);
+                const totalProdPesoBruto = produtosSheet.reduce((acc, p) => acc + (typeof p[6] === 'number' ? p[6] : 0), 0);
+                const totalProdTara = produtosSheet.reduce((acc, p) => acc + (typeof p[7] === 'number' ? p[7] : 0), 0);
+                
+                produtosSheet.push([
+                    '',
+                    '⭐ TOTAIS',
+                    totalProdViagens,
+                    '',
+                    '',
+                    totalProdPesoLiq,
+                    totalProdPesoBruto,
+                    totalProdTara,
+                    '-',
+                    '-',
+                    '-',
+                    Math.round(totalProdPesoLiq / totalProdViagens),
+                    '100%'
+                ]);
+                
+                XLSX.utils.sheet_add_aoa(ws3, produtosSheet, { origin: `A${dataRow3 + 8}` });
+                
+                ws3['!cols'] = [
+                    { wch: 5 }, { wch: 35 }, { wch: 12 }, { wch: 16 }, { wch: 12 },
+                    { wch: 18 }, { wch: 18 }, { wch: 14 }, { wch: 18 }, { wch: 18 },
+                    { wch: 18 }, { wch: 20 }, { wch: 14 }
+                ];
+                ws3['!autofilter'] = { ref: `A${dataRow3 + 7}:M${dataRow3 + 7 + produtosSheet.length - 1}` };
+                ws3['!freeze'] = { xSplit: 0, ySplit: dataRow3 + 7, topLeftCell: `A${dataRow3 + 8}`, state: 'frozen' };
+                if (!ws3['!merges']) ws3['!merges'] = [];
+                ws3['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 3 } });
+                ws3['!merges'].push({ s: { r: dataRow3, c: 0 }, e: { r: dataRow3, c: 5 } }); // Estatísticas
+                ws3['!merges'].push({ s: { r: dataRow3 + 5, c: 0 }, e: { r: dataRow3 + 5, c: 5 } }); // Detalhamento
+                ws3['!ref'] = `A1:M${dataRow3 + 8 + produtosSheet.length - 1}`;
+                // Estilos: seções, cabeçalho da tabela e linhas
+                estilizarSecao(ws3, `A${dataRow3}`);
+                estilizarSecao(ws3, `A${dataRow3 + 5}`);
+                estilizarLinhaCabecalho(ws3, dataRow3 + 6, 0, 12);
+                estilizarLinhasDados(ws3, dataRow3 + 7, dataRow3 + 7 + produtosSheet.length - 1, 0, 12, { totalNaUltima: true });
+                XLSX.utils.book_append_sheet(wb, ws3, "Por Produto");
+
+                // ===== ABA 4: RESUMO DIÁRIO =====
+                const ws4 = XLSX.utils.aoa_to_sheet([]);
+                const dataRow4 = criarCabecalho(ws4, 'RESUMO DIÁRIO', 0);
+                
+                XLSX.utils.sheet_add_aoa(ws4, [
+                    ['📊 ESTATÍSTICAS GERAIS'],
+                    ['Total de Viagens:', pesagens.length],
+                    ['Peso Total (kg):', totalLiquido],
+                    ['Período:', `${pesagens.length} registros`],
+                    [], // Linha em branco
+                    ['📋 TIMELINE DIÁRIA'],
+                    [], // Linha em branco
+                    ['Data', 'Dia da Semana', 'Nº Viagens', 'Transportadoras', 'Motoristas', 'Produtos', 'Peso Líquido (kg)', 'Peso Bruto (kg)', 'Tara (kg)', 'Peso Nota (kg)', '⚖️ Diferença (kg)', '📈 Diferença (%)', 'Média/Viagem (kg)', '% do Total']
+                ], { origin: `A${dataRow4}` });
+                
+                const diarioData = pesagens.reduce((acc, p) => {
+                    const data = new Date(p.dataEntrada.seconds * 1000).toISOString().split('T')[0];
+                    if (!acc[data]) {
+                        acc[data] = { 
+                            viagens: 0, 
+                            pesoLiquido: 0, 
+                            pesoBruto: 0,
+                            tara: 0,
+                            pesoNota: 0,
+                            transportadoras: new Set(),
+                            motoristas: new Set(),
+                            produtos: new Set()
+                        };
+                    }
+                    acc[data].viagens++;
+                    acc[data].pesoLiquido += Number(p.pesoLiquido) || 0;
+                    acc[data].pesoBruto += Number(p.pesoBruto) || 0;
+                    acc[data].tara += Number(p.tara) || 0;
+                    acc[data].pesoNota += Number(p.pesoNota) || 0;
+                    acc[data].transportadoras.add(p.transportadora);
+                    acc[data].motoristas.add(p.motorista);
+                    acc[data].produtos.add(p.produto);
+                    return acc;
+                }, {});
+                
+                const diarioSheet = Object.entries(diarioData)
+                    .sort(([a], [b]) => new Date(a) - new Date(b))
+                    .map(([data, dados]) => {
+                        const diff = dados.pesoNota > 0 ? dados.pesoLiquido - dados.pesoNota : '';
+                        const perc = dados.pesoNota > 0 ? (((dados.pesoLiquido - dados.pesoNota) / dados.pesoNota) * 100).toFixed(1) : '';
+                        
+                        return [
+                            new Date(data + 'T00:00:00'),
+                            ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'][new Date(data).getDay()],
+                            dados.viagens,
+                            dados.transportadoras.size,
+                            dados.motoristas.size,
+                            dados.produtos.size,
+                            Math.round(dados.pesoLiquido),
+                            Math.round(dados.pesoBruto),
+                            Math.round(dados.tara),
+                            dados.pesoNota > 0 ? Math.round(dados.pesoNota) : '-',
+                            diff !== '' ? diff.toFixed(0) : '-',
+                            perc !== '' ? perc + '%' : '-',
+                            Math.round(dados.pesoLiquido / dados.viagens),
+                            ((dados.pesoLiquido / totalLiquido) * 100).toFixed(1) + '%'
+                        ];
+                    });
+                
+                // Adicionar linha de totais
+                const totalDiarioViagens = diarioSheet.reduce((acc, d) => acc + d[2], 0);
+                const totalDiarioPesoLiq = diarioSheet.reduce((acc, d) => acc + (typeof d[6] === 'number' ? d[6] : 0), 0);
+                const totalDiarioPesoBruto = diarioSheet.reduce((acc, d) => acc + (typeof d[7] === 'number' ? d[7] : 0), 0);
+                const totalDiarioTara = diarioSheet.reduce((acc, d) => acc + (typeof d[8] === 'number' ? d[8] : 0), 0);
+                
+                diarioSheet.push([
+                    '⭐ TOTAIS',
+                    '',
+                    totalDiarioViagens,
+                    '',
+                    '',
+                    '',
+                    totalDiarioPesoLiq,
+                    totalDiarioPesoBruto,
+                    totalDiarioTara,
+                    '-',
+                    '-',
+                    '-',
+                    Math.round(totalDiarioPesoLiq / totalDiarioViagens),
+                    '100%'
+                ]);
+                
+                XLSX.utils.sheet_add_aoa(ws4, diarioSheet, { origin: `A${dataRow4 + 8}` });
+                
+                ws4['!cols'] = [
+                    { wch: 12 }, { wch: 14 }, { wch: 12 }, { wch: 16 }, { wch: 12 },
+                    { wch: 10 }, { wch: 18 }, { wch: 18 }, { wch: 14 }, { wch: 18 },
+                    { wch: 18 }, { wch: 18 }, { wch: 20 }, { wch: 14 }
+                ];
+                ws4['!autofilter'] = { ref: `A${dataRow4 + 7}:N${dataRow4 + 7 + diarioSheet.length - 1}` };
+                ws4['!freeze'] = { xSplit: 0, ySplit: dataRow4 + 7, topLeftCell: `A${dataRow4 + 8}`, state: 'frozen' };
+                if (!ws4['!merges']) ws4['!merges'] = [];
+                ws4['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 3 } });
+                ws4['!merges'].push({ s: { r: dataRow4, c: 0 }, e: { r: dataRow4, c: 5 } }); // Estatísticas
+                ws4['!merges'].push({ s: { r: dataRow4 + 5, c: 0 }, e: { r: dataRow4 + 5, c: 5 } }); // Timeline
+                ws4['!ref'] = `A1:N${dataRow4 + 8 + diarioSheet.length - 1}`;
+                // Estilos: seções, cabeçalho da tabela e linhas
+                estilizarSecao(ws4, `A${dataRow4}`);
+                estilizarSecao(ws4, `A${dataRow4 + 5}`);
+                estilizarLinhaCabecalho(ws4, dataRow4 + 6, 0, 13);
+                estilizarLinhasDados(ws4, dataRow4 + 7, dataRow4 + 7 + diarioSheet.length - 1, 0, 13, { totalNaUltima: true });
+                // Ajustar formato da coluna Data (coluna 0) na aba diária
+                for (let r = dataRow4 + 7; r < dataRow4 + 7 + diarioSheet.length - 1; r++) {
+                    const ref = XLSX.utils.encode_cell({ r, c: 0 });
+                    if (ws4[ref] && ws4[ref].s) ws4[ref].s.numFmt = 'dd/mm/yyyy';
+                }
+                XLSX.utils.book_append_sheet(wb, ws4, "Resumo Diário");
+
+                // ===== ABA 5: TOP 10 MOTORISTAS =====
+                const ws5 = XLSX.utils.aoa_to_sheet([]);
+                const dataRow5 = criarCabecalho(ws5, 'TOP 10 MOTORISTAS - MAIS VIAGENS', 0);
+                
+                const motoristasData = pesagens.reduce((acc, p) => {
+                    const motorista = p.motorista || 'Não Informado';
+                    if (!acc[motorista]) acc[motorista] = { viagens: 0, peso: 0, placas: new Set() };
+                    acc[motorista].viagens++;
+                    acc[motorista].peso += p.pesoLiquido || 0;
+                    acc[motorista].placas.add(p.placa);
+                    return acc;
+                }, {});
+                
+                const top10Motoristas = Object.entries(motoristasData)
+                    .sort(([, a], [, b]) => b.viagens - a.viagens)
+                    .slice(0, 10)
+                    .map(([nome, dados], index) => ({
+                        '🏆 Posição': index + 1,
+                        'Motorista': nome,
+                        'Nº Viagens': dados.viagens,
+                        'Peso Total (kg)': dados.peso,
+                        'Média/Viagem (kg)': Math.round(dados.peso / dados.viagens),
+                        'Veículos Diferentes': dados.placas.size
+                    }));
+                
+                const wsData5 = XLSX.utils.json_to_sheet(top10Motoristas, { origin: `A${dataRow5}` });
+                Object.keys(wsData5).forEach(cell => { if (cell[0] !== '!') ws5[cell] = wsData5[cell]; });
+                
+                ws5['!cols'] = [{ wch: 12 }, { wch: 35 }, { wch: 15 }, { wch: 18 }, { wch: 20 }, { wch: 20 }];
+                ws5['!autofilter'] = { ref: `A${dataRow5}:F${dataRow5 + top10Motoristas.length - 1}` };
+                ws5['!freeze'] = { xSplit: 0, ySplit: dataRow5, topLeftCell: `A${dataRow5 + 1}`, state: 'frozen' };
+                if (!ws5['!merges']) ws5['!merges'] = [];
+                ws5['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 3 } });
+                ws5['!ref'] = `A1:F${dataRow5 + top10Motoristas.length - 1}`;
+                // Estilos
+                estilizarLinhaCabecalho(ws5, dataRow5 - 1, 0, 5);
+                estilizarLinhasDados(ws5, dataRow5, dataRow5 + top10Motoristas.length - 1, 0, 5);
+                XLSX.utils.book_append_sheet(wb, ws5, "Top Motoristas");
+
+                // ===== ABA 6: ANÁLISE DE DIVERGÊNCIAS =====
+                const ws6 = XLSX.utils.aoa_to_sheet([]);
+                const dataRow6 = criarCabecalho(ws6, 'ANÁLISE DE DIVERGÊNCIAS (Peso Nota vs Balança)', 0);
+                
+                const pesagensComNota = pesagens.filter(p => Number(p.pesoNota) > 0);
+                const divergencias = pesagensComNota.filter(p => {
+                    const diff = Math.abs(Number(p.pesoLiquido) - Number(p.pesoNota));
+                    return diff > 50; // Divergência > 50kg
+                });
+                
+                XLSX.utils.sheet_add_aoa(ws6, [
+                    ['📊 ESTATÍSTICAS GERAIS'],
+                    ['Total de Pesagens:', pesagens.length],
+                    ['Pesagens com Nota Fiscal:', pesagensComNota.length],
+                    ['Divergências Encontradas (>50kg):', divergencias.length],
+                    ['Taxa de Divergência:', pesagensComNota.length > 0 ? ((divergencias.length / pesagensComNota.length) * 100).toFixed(1) + '%' : '0%'],
+                    [], // Linha em branco
+                    ['⚠️ LISTA DE DIVERGÊNCIAS']
+                ], { origin: `A${dataRow6}` });
+                
+                const divergenciasData = divergencias
+                    .sort((a, b) => Math.abs(Number(b.pesoLiquido) - Number(b.pesoNota)) - Math.abs(Number(a.pesoLiquido) - Number(a.pesoNota)))
+                    .map(p => {
+                        const pesoLiq = Number(p.pesoLiquido) || 0;
+                        const pesoNF = Number(p.pesoNota) || 0;
+                        const diff = pesoLiq - pesoNF;
+                        const perc = pesoNF > 0 ? ((diff / pesoNF) * 100).toFixed(2) : '0';
+                        const status = diff > 0 ? '📈 Excesso' : '📉 Falta';
+                        
+                        return {
+                            'Status': status,
+                            'Nº Ticket': p.num,
+                            'Data': new Date(p.dataEntrada.seconds * 1000).toLocaleDateString('pt-BR'),
+                            'Placa': p.placa,
+                            'Produto': p.produto,
+                            'Nota Fiscal': this.formatarNotasFiscais(p.notaFiscal, p.notaFiscal2),
+                            'Peso Balança (kg)': pesoLiq,
+                            'Peso Nota (kg)': pesoNF,
+                            '⚖️ Diferença (kg)': Math.abs(diff).toFixed(2),
+                            '📈 Diferença (%)': perc + '%'
+                        };
+                    });
+                
+                if (divergenciasData.length > 0) {
+                    const wsData6 = XLSX.utils.json_to_sheet(divergenciasData, { origin: `A${dataRow6 + 7}` });
+                    Object.keys(wsData6).forEach(cell => { if (cell[0] !== '!') ws6[cell] = wsData6[cell]; });
+                    
+                    ws6['!cols'] = [{ wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 30 }, { wch: 15 }, { wch: 18 }, { wch: 18 }, { wch: 18 }, { wch: 18 }];
+                    ws6['!autofilter'] = { ref: `A${dataRow6 + 7}:J${dataRow6 + 7 + divergenciasData.length - 1}` };
+                    ws6['!freeze'] = { xSplit: 0, ySplit: dataRow6 + 7, topLeftCell: `A${dataRow6 + 8}`, state: 'frozen' };
+                    ws6['!ref'] = `A1:J${dataRow6 + 7 + divergenciasData.length - 1}`;
+                    // Estilos
+                    estilizarLinhaCabecalho(ws6, dataRow6 + 6, 0, 9);
+                    estilizarLinhasDados(ws6, dataRow6 + 7, dataRow6 + 7 + divergenciasData.length - 1, 0, 9);
+                } else {
+                    XLSX.utils.sheet_add_aoa(ws6, [['✅ Nenhuma divergência significativa encontrada!']], { origin: `A${dataRow6 + 7}` });
+                    ws6['!ref'] = `A1:J${dataRow6 + 8}`;
+                    const refOk = `A${dataRow6 + 7}`;
+                    if (ws6[refOk]) ws6[refOk].s = {
+                        font: { bold: true, color: { rgb: '006100' } },
+                        fill: { patternType: 'solid', fgColor: { rgb: 'C6EFCE' } },
+                        alignment: { vertical: 'center', horizontal: 'center' }
+                    };
+                }
+                
+                if (!ws6['!merges']) ws6['!merges'] = [];
+                ws6['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 5 } });
+                ws6['!merges'].push({ s: { r: dataRow6, c: 0 }, e: { r: dataRow6, c: 5 } }); // Título Estatísticas
+                ws6['!merges'].push({ s: { r: dataRow6 + 6, c: 0 }, e: { r: dataRow6 + 6, c: 5 } }); // Título Lista
+                // Estilizar seções
+                estilizarSecao(ws6, `A${dataRow6}`);
+                const refSecaoLista = `A${dataRow6 + 6}`;
+                if (ws6[refSecaoLista]) ws6[refSecaoLista].s = {
+                    font: { name: 'Calibri', sz: 12, bold: true, color: { rgb: 'FFFFFF' } },
+                    fill: { patternType: 'solid', fgColor: { rgb: 'C00000' } },
+                    alignment: { vertical: 'center', horizontal: 'left' }
+                };
+                XLSX.utils.book_append_sheet(wb, ws6, "Divergências");
+
+                // ===== ABA 7: RESUMO EXECUTIVO =====
+                const ws7 = XLSX.utils.aoa_to_sheet([]);
+                const dataRow7 = criarCabecalho(ws7, '📊 DASHBOARD EXECUTIVO', 0);
+                
+                const maiorPeso = Math.max(...pesagens.map(p => p.pesoLiquido || 0));
+                const menorPeso = Math.min(...pesagens.filter(p => p.pesoLiquido > 0).map(p => p.pesoLiquido));
+                const mediaPeso = totalLiquido / pesagens.length;
+                
+                const diasUnicos = new Set(pesagens.map(p => new Date(p.dataEntrada.seconds * 1000).toISOString().split('T')[0])).size;
+                const mediaViagensDia = pesagens.length / diasUnicos;
+                
+                const transportadoraMaisAtiva = Object.entries(metrics.transportadoras)
+                    .sort(([, a], [, b]) => b.viagens - a.viagens)[0];
+                
+                const produtoMaisMovimentado = Object.entries(produtosData)
+                    .sort(([, a], [, b]) => b.peso - a.peso)[0];
+                
+                XLSX.utils.sheet_add_aoa(ws7, [
+                    ['📈 INDICADORES PRINCIPAIS'],
+                    ['Total de Viagens:', pesagens.length],
+                    ['Peso Total Transportado:', `${totalLiquido.toLocaleString('pt-BR')} kg (${(totalLiquido / 1000).toFixed(2)} ton)`],
+                    ['Peso Médio por Viagem:', `${Math.round(mediaPeso).toLocaleString('pt-BR')} kg`],
+                    ['Maior Peso Registrado:', `${maiorPeso.toLocaleString('pt-BR')} kg`],
+                    ['Menor Peso Registrado:', `${menorPeso.toLocaleString('pt-BR')} kg`],
+                    [],
+                    ['📅 ANÁLISE TEMPORAL'],
+                    ['Período Analisado:', `${diasUnicos} dias`],
+                    ['Média de Viagens/Dia:', Math.round(mediaViagensDia)],
+                    ['Primeira Pesagem:', new Date(Math.min(...pesagens.map(p => p.dataEntrada.seconds * 1000))).toLocaleDateString('pt-BR')],
+                    ['Última Pesagem:', new Date(Math.max(...pesagens.map(p => p.dataEntrada.seconds * 1000))).toLocaleDateString('pt-BR')],
+                    [],
+                    ['🏆 DESTAQUES'],
+                    ['Transportadora Mais Ativa:', transportadoraMaisAtiva ? `${transportadoraMaisAtiva[0]} (${transportadoraMaisAtiva[1].viagens} viagens)` : 'N/A'],
+                    ['Produto Mais Movimentado:', produtoMaisMovimentado ? `${produtoMaisMovimentado[0]} (${(produtoMaisMovimentado[1].peso / 1000).toFixed(1)} ton)` : 'N/A'],
+                    ['Total de Motoristas:', Object.keys(motoristasData).length],
+                    ['Total de Placas Diferentes:', new Set(pesagens.map(p => p.placa)).size],
+                    [],
+                    ['💰 ANÁLISE DE DIVERGÊNCIAS'],
+                    ['Pesagens com Nota Fiscal:', pesagensComNota.length],
+                    ['Divergências Detectadas:', divergencias.length],
+                    ['Taxa de Conformidade:', pesagensComNota.length > 0 ? `${(100 - (divergencias.length / pesagensComNota.length) * 100).toFixed(1)}%` : '100%']
+                ], { origin: `A${dataRow7}` });
+                
+                ws7['!cols'] = [{ wch: 32 }, { wch: 55 }];
+                if (!ws7['!merges']) ws7['!merges'] = [];
+                ws7['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: 3 } });
+                ws7['!merges'].push({ s: { r: dataRow7, c: 0 }, e: { r: dataRow7, c: 1 } }); // Indicadores
+                ws7['!merges'].push({ s: { r: dataRow7 + 7, c: 0 }, e: { r: dataRow7 + 7, c: 1 } }); // Temporal
+                ws7['!merges'].push({ s: { r: dataRow7 + 13, c: 0 }, e: { r: dataRow7 + 13, c: 1 } }); // Destaques
+                ws7['!merges'].push({ s: { r: dataRow7 + 19, c: 0 }, e: { r: dataRow7 + 19, c: 1 } }); // Divergências
+                ws7['!ref'] = `A1:B${dataRow7 + 25}`;
+
+                // Estilizar as seções do dashboard
+                [dataRow7, dataRow7 + 7, dataRow7 + 13, dataRow7 + 19].forEach(linha => {
+                    const ref = `A${linha + 1}`;
+                    if (ws7[ref]) ws7[ref].s = this._estiloTituloFaixa(12);
+                });
+
+                // Estilizar as linhas de indicador (rótulo cinza + valor destaque)
+                const rangeWs7 = XLSX.utils.decode_range(ws7['!ref']);
+                for (let r = dataRow7; r <= rangeWs7.e.r; r++) {
+                    const labelRef = XLSX.utils.encode_cell({ r, c: 0 });
+                    const valueRef = XLSX.utils.encode_cell({ r, c: 1 });
+                    // Pular linhas de título (já estilizadas)
+                    if ([dataRow7, dataRow7 + 7, dataRow7 + 13, dataRow7 + 19].includes(r)) continue;
+
+                    if (ws7[labelRef] && ws7[labelRef].v) {
+                        ws7[labelRef].s = {
+                            font: { name: 'Calibri', sz: 11, bold: true },
+                            fill: { patternType: 'solid', fgColor: { rgb: 'F2F2F2' } },
+                            alignment: { vertical: 'center', horizontal: 'left', indent: 1 },
+                            border: {
+                                top:    { style: 'thin', color: { rgb: 'D9D9D9' } },
+                                bottom: { style: 'thin', color: { rgb: 'D9D9D9' } }
+                            }
+                        };
+                    }
+                    if (ws7[valueRef] && ws7[valueRef].v !== undefined && ws7[valueRef].v !== '') {
+                        ws7[valueRef].s = {
+                            font: { name: 'Calibri', sz: 11, color: { rgb: '0D9488' }, bold: true },
+                            alignment: { vertical: 'center', horizontal: 'left' },
+                            border: {
+                                top:    { style: 'thin', color: { rgb: 'D9D9D9' } },
+                                bottom: { style: 'thin', color: { rgb: 'D9D9D9' } }
+                            }
+                        };
+                    }
+                }
+
+                XLSX.utils.book_append_sheet(wb, ws7, "Dashboard");
+
+                XLSX.writeFile(wb, nomeArquivo);
+                this.showNotification("✅ Excel com 7 abas exportado com sucesso! 📊");
+                
+                // Registrar log
+                this.registrarLog('exportou_excel_multiabas', `Exportou relatório Excel com múltiplas abas: ${titulo}`, {
+                    nomeArquivo: nomeArquivo,
+                    totalRegistros: pesagens.length,
+                    totalAbas: 7
+                });
+            },
+
+            exportarCSV() {
+                const pesagens = this.getFilteredPesagens();
+                if (pesagens.length === 0) {
+                    this.showNotification("Nenhum dado para exportar.");
+                    return;
+                }
+
+                const dados = pesagens.map(p => ({
+                    'Numero': p.num,
+                    'DataEntrada': new Date(p.dataEntrada.seconds * 1000).toLocaleDateString('pt-BR'),
+                    'DataSaida': new Date(p.dataSaida.seconds * 1000).toLocaleDateString('pt-BR'),
+                    'Placa': p.placa,
+                    'Motorista': p.motorista,
+                    'NotaFiscal': this.formatarNotasFiscais(p.notaFiscal, p.notaFiscal2),
+                    'Cliente': p.cliente,
+                    'Transportadora': p.transportadora || '',
+                    'RazaoSocial': p.razaoSocial || '',
+                    'Obra': p.obra,
+                    'Produto': p.produto,
+                    'PesoBruto': p.pesoBruto,
+                    'Tara': p.tara,
+                    'PesoLiquido': p.pesoLiquido
+                }));
+
+                const ws = XLSX.utils.json_to_sheet(dados);
+                const csv = XLSX.utils.sheet_to_csv(ws, { FS: ';' }); // Separador ponto-e-vírgula
+                
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                const nomeArquivo = this._gerarNomeRelatorio('csv');
+                link.download = nomeArquivo;
+                link.click();
+                
+                // Registrar log
+                this.registrarLog('exportou_csv', `Exportou relatório em CSV`, {
+                    nomeArquivo: nomeArquivo,
+                    totalRegistros: dados.length
+                });
+                
+                this.showNotification("CSV exportado (compatível com ERP)! 📄");
+            },
+
+            // ===== EXPORTAÇÃO PERSONALIZADA - NOVAS FUNÇÕES =====
+            abrirModalExportacao() {
+                const modal = document.getElementById('modal-export-custom');
+                modal.classList.add('active');
+                
+                // Resetar formulário
+                document.getElementById('form-export-custom').reset();
+                document.querySelectorAll('.export-col-checkbox').forEach(cb => {
+                    if(['col-num', 'col-data', 'col-placa', 'col-motorista', 'col-produto', 'col-cliente', 'col-transportadora', 'col-peso-bruto', 'col-tara', 'col-peso-liquido', 'col-nf'].includes(cb.name)) {
+                        cb.checked = true;
+                    }
+                });
+                
+                // Definir nome do arquivo baseado no filtro atual
+                const titulo = this.dom.relatorioTitulo.value.trim() || 'relatorio_balanca';
+                document.getElementById('export-filename').value = titulo.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+            },
+
+            handleExportacaoPersonalizada() {
+                const formato = document.querySelector('input[name="export-format"]:checked').value;
+                const filename = document.getElementById('export-filename').value.trim() || 'relatorio_balanca';
+                const sortBy = document.getElementById('sort-by').value;
+                
+                const config = {
+                    formato,
+                    filename,
+                    sortBy,
+                    // Opções PDF
+                    pdfWatermark: document.querySelector('input[name="pdf-watermark"]')?.checked,
+                    watermarkText: document.getElementById('watermark-text')?.value || 'CONFIDENCIAL',
+                    pdfLandscape: document.querySelector('input[name="pdf-landscape"]')?.checked,
+                    pdfCompress: document.querySelector('input[name="pdf-compress"]')?.checked,
+                    // Opções Excel
+                    excelFormatting: document.querySelector('input[name="excel-formatting"]')?.checked,
+                    excelFormulas: document.querySelector('input[name="excel-formulas"]')?.checked,
+                    excelFreeze: document.querySelector('input[name="excel-freeze"]')?.checked,
+                    excelAutofilter: document.querySelector('input[name="excel-autofilter"]')?.checked,
+                };
+                
+                this.exportarPersonalizado(config);
+            },
+
+            exportarPersonalizado(config) {
+                const pesagens = this.getFilteredPesagens();
+                
+                if (pesagens.length === 0) {
+                    this.showNotification('❌ Nenhum dado para exportar!');
+                    return;
+                }
+                
+                // Filtrar colunas selecionadas
+                const colunasAtivas = Array.from(document.querySelectorAll('.export-col-checkbox:checked')).map(cb => cb.name.replace('col-', ''));
+                
+                if (colunasAtivas.length === 0) {
+                    this.showNotification('❌ Selecione pelo menos uma coluna!');
+                    return;
+                }
+                
+                // Ordenar dados
+                const dadosOrdenados = this.ordenarDadosExportacao(pesagens, config.sortBy);
+                
+                // Preparar dados filtrados
+                const dadosFiltrados = dadosOrdenados.map(p => {
+                    const linha = {};
+                    if (colunasAtivas.includes('num')) linha['Nº'] = p.num;
+                    if (colunasAtivas.includes('data')) linha['Data'] = new Date(p.dataEntrada.seconds * 1000).toLocaleDateString('pt-BR');
+                    if (colunasAtivas.includes('placa')) linha['Placa'] = p.placa;
+                    if (colunasAtivas.includes('motorista')) linha['Motorista'] = p.motorista || '-';
+                    if (colunasAtivas.includes('produto')) linha['Produto'] = p.produto;
+                    if (colunasAtivas.includes('cliente')) linha['Cliente'] = p.cliente;
+                    if (colunasAtivas.includes('transportadora')) linha['Transportadora'] = p.transportadora || '-';
+                    if (colunasAtivas.includes('razao-social')) linha['Razão Social'] = p.razaoSocial || '-';
+                    if (colunasAtivas.includes('obra')) linha['Obra'] = p.obra || '-';
+                    if (colunasAtivas.includes('peso-bruto')) linha['Peso Bruto (kg)'] = p.pesoBruto;
+                    if (colunasAtivas.includes('tara')) linha['Tara (kg)'] = p.tara;
+                    if (colunasAtivas.includes('peso-liquido')) linha['Peso Líquido (kg)'] = p.pesoLiquido;
+                    if (colunasAtivas.includes('nf')) linha['NF'] = this.formatarNotasFiscais(p.notaFiscal, p.notaFiscal2);
+                    
+                    // Peso da Nota Fiscal (Líquido)
+                    const pesoNF = parseFloat(p.pesoNota) || 0;
+                    if (colunasAtivas.includes('peso-nf-liquido')) linha['Peso NF Líquido (kg)'] = pesoNF > 0 ? pesoNF : '-';
+                    
+                    // Diferença e Porcentagem (comparando peso líquido)
+                    if (colunasAtivas.includes('diferenca-peso') || colunasAtivas.includes('percentual-diferenca')) {
+                        const pesoBalanca = parseFloat(p.pesoLiquido) || 0;
+                        const diferenca = pesoNF > 0 ? (pesoBalanca - pesoNF) : 0;
+                        const percentual = pesoNF > 0 ? ((diferenca / pesoNF) * 100) : 0;
+                        
+                        if (colunasAtivas.includes('diferenca-peso')) {
+                            linha['⚖️ Diferença (kg)'] = pesoNF > 0 ? diferenca.toFixed(2) : '-';
+                        }
+                        if (colunasAtivas.includes('percentual-diferenca')) {
+                            linha['📈 Diferença (%)'] = pesoNF > 0 ? percentual.toFixed(2) + '%' : '-';
+                        }
+                    }
+                    
+                    if (colunasAtivas.includes('certificado')) linha['Certificado'] = p.certificado || '-';
+                    if (colunasAtivas.includes('observacoes')) linha['Observações'] = p.observacao || '-';
+                    return linha;
+                });
+                
+                // Exportar conforme formato
+                switch (config.formato) {
+                    case 'pdf':
+                        this.exportarPDFPersonalizado(dadosFiltrados, config);
+                        break;
+                    case 'excel':
+                        this.exportarExcelPersonalizado(dadosFiltrados, dadosOrdenados, config);
+                        break;
+                    case 'csv':
+                        this.exportarCSVPersonalizado(dadosFiltrados, config);
+                        break;
+                    case 'json':
+                        this.exportarJSONPersonalizado(dadosOrdenados, config);
+                        break;
+                }
+                
+                document.getElementById('modal-export-custom').classList.remove('active');
+                this.showNotification(`✅ Exportação concluída! Formato: ${config.formato.toUpperCase()}`);
+            },
+
+            ordenarDadosExportacao(pesagens, criterio) {
+                const dados = [...pesagens];
+                
+                switch (criterio) {
+                    case 'data-desc':
+                        return dados.sort((a, b) => b.dataEntrada.seconds - a.dataEntrada.seconds);
+                    case 'data-asc':
+                        return dados.sort((a, b) => a.dataEntrada.seconds - b.dataEntrada.seconds);
+                    case 'num-desc':
+                        return dados.sort((a, b) => b.num - a.num);
+                    case 'num-asc':
+                        return dados.sort((a, b) => a.num - b.num);
+                    case 'peso-desc':
+                        return dados.sort((a, b) => b.pesoLiquido - a.pesoLiquido);
+                    case 'peso-asc':
+                        return dados.sort((a, b) => a.pesoLiquido - b.pesoLiquido);
+                    case 'placa':
+                        return dados.sort((a, b) => a.placa.localeCompare(b.placa));
+                    case 'produto':
+                        return dados.sort((a, b) => a.produto.localeCompare(b.produto));
+                    default:
+                        return dados;
+                }
+            },
+
+            exportarPDFPersonalizado(dados, config) {
+                const { jsPDF } = window.jspdf;
+                const orientation = config.pdfLandscape ? 'landscape' : 'portrait';
+                const doc = new jsPDF(orientation, 'mm', 'a4');
+                
+                const pageWidth = doc.internal.pageSize.getWidth();
+                const pageHeight = doc.internal.pageSize.getHeight();
+                
+                // Marca d'água (se ativada)
+                if (config.pdfWatermark) {
+                    doc.setFontSize(60);
+                    doc.setTextColor(200, 200, 200);
+                    doc.setFont('Helvetica', 'bold');
+                    doc.text(config.watermarkText, pageWidth / 2, pageHeight / 2, {
+                        align: 'center',
+                        angle: 45
+                    });
+                }
+                
+                // Cabeçalho
+                doc.setFontSize(18);
+                doc.setTextColor(13, 148, 136);
+                doc.text(this.state.config.nome, 14, 15);
+                
+                doc.setFontSize(12);
+                doc.setTextColor(0, 0, 0);
+                doc.text(`Relatório Personalizado - ${new Date().toLocaleDateString('pt-BR')}`, 14, 22);
+                
+                // Tabela
+                const headers = [Object.keys(dados[0] || {})];
+                const rows = dados.map(d => Object.values(d));
+                
+                doc.autoTable({
+                    head: headers,
+                    body: rows,
+                    startY: 28,
+                    styles: { fontSize: orientation === 'landscape' ? 8 : 7, cellPadding: 2 },
+                    headStyles: { fillColor: [13, 148, 136], textColor: 255, fontStyle: 'bold' },
+                    alternateRowStyles: { fillColor: [245, 245, 245] },
+                    margin: { top: 28, left: 14, right: 14 }
+                });
+                
+                // Rodapé
+                const pageCount = doc.internal.getNumberOfPages();
+                for (let i = 1; i <= pageCount; i++) {
+                    doc.setPage(i);
+                    doc.setFontSize(8);
+                    doc.setTextColor(150);
+                    doc.text(`Página ${i} de ${pageCount}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
+                    doc.text(this.state.config.footer || 'Gerado pelo Balança Pro+', pageWidth / 2, pageHeight - 6, { align: 'center' });
+                }
+                
+                // Salvar
+                const filename = `${config.filename || 'relatorio'}.pdf`;
+                doc.save(filename);
+                
+                // Registrar log
+                this.registrarLog('exportou_pdf', { 
+                    nomeArquivo: filename, 
+                    totalRegistros: dados.length,
+                    personalizado: true,
+                    opcoes: {
+                        marcaDagua: config.pdfWatermark,
+                        paisagem: config.pdfLandscape,
+                        compressao: config.pdfCompress
+                    }
+                });
+            },
+
+            exportarExcelPersonalizado(dados, dadosCompletos, config) {
+                const titulo = config.filename || 'Relatório Personalizado';
+                const nomeArquivo = `${titulo.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_${new Date().getTime()}.xlsx`;
+                const configSistema = this.state.config;
+                
+                if (dados.length === 0) {
+                    this.showNotification("⚠️ Nenhum dado para exportar.");
+                    return;
+                }
+
+                const wb = XLSX.utils.book_new();
+                const ws = XLSX.utils.aoa_to_sheet([]);
+                
+                let currentRow = 0;
+                
+                // ===== CABEÇALHO DO RELATÓRIO =====
+                XLSX.utils.sheet_add_aoa(ws, [[titulo]], { origin: 'A1' });
+                currentRow++;
+                XLSX.utils.sheet_add_aoa(ws, [[configSistema.nome || 'Empresa']], { origin: 'A2' });
+                currentRow++;
+                
+                const dataInicio = this.dom.filtroDataInicio.value;
+                const dataFim = this.dom.filtroDataFim.value;
+                let periodo = 'Período: Todos os registros';
+                if (dataInicio && dataFim) { 
+                    periodo = `Período: ${new Date(dataInicio+'T00:00:00').toLocaleDateString('pt-BR')} a ${new Date(dataFim+'T00:00:00').toLocaleDateString('pt-BR')}`; 
+                }
+                XLSX.utils.sheet_add_aoa(ws, [[periodo]], { origin: 'A3' });
+                currentRow++;
+                XLSX.utils.sheet_add_aoa(ws, [[`Gerado em: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}`]], { origin: 'A4' });
+                currentRow++;
+                
+                currentRow++; // Linha em branco
+                
+                XLSX.utils.sheet_add_aoa(ws, [['EXPORTAÇÃO PERSONALIZADA']], { origin: `A${currentRow + 1}` });
+                currentRow++;
+                
+                currentRow++; // Linha em branco
+                
+                // ===== TABELA DE DADOS =====
+                const dataStartRow = currentRow + 1;
+                
+                // Adicionar dados usando json_to_sheet
+                const wsData = XLSX.utils.json_to_sheet(dados, { origin: `A${dataStartRow}` });
+                
+                // Copiar dados para a planilha principal
+                Object.keys(wsData).forEach(cell => {
+                    if (cell[0] !== '!') {
+                        ws[cell] = wsData[cell];
+                    }
+                });
+                
+                // ===== FORMATAÇÃO =====
+                const headers = Object.keys(dados[0] || {});
+                const numCols = headers.length;
+                
+                // Larguras automáticas baseadas no conteúdo
+                ws['!cols'] = headers.map(header => {
+                    if (header.includes('Ticket')) return { wch: 19.80 };
+                    if (header.includes('Nota') && !header.includes('Peso')) return { wch: 15 };
+                    if (header.includes('Data')) return { wch: 20 };
+                    if (header.includes('Placa')) return { wch: 14 };
+                    if (header.includes('Motorista')) return { wch: 28 };
+                    if (header.includes('Cliente') || header.includes('Forn')) return { wch: 30 };
+                    if (header.includes('Transportadora')) return { wch: 35 };
+                    if (header.includes('Razão Social')) return { wch: 35 };
+                    if (header.includes('Obra')) return { wch: 25 };
+                    if (header.includes('Produto')) return { wch: 30 };
+                    if (header.includes('Certificado')) return { wch: 18 };
+                    if (header.includes('Peso') || header.includes('Diferença')) return { wch: 18 };
+                    if (header.includes('Observ')) return { wch: 50 };
+                    return { wch: 20 }; // Padrão
+                });
+                
+                // Auto-filtro (se ativado)
+                const lastDataRow = dataStartRow + dados.length - 1;
+                if (config.excelAutofilter) {
+                    const lastCol = String.fromCharCode(64 + numCols);
+                    ws['!autofilter'] = { ref: `A${dataStartRow}:${lastCol}${lastDataRow}` };
+                }
+                
+                // Congelar painéis (se ativado)
+                if (config.excelFreeze) {
+                    ws['!freeze'] = { xSplit: 0, ySplit: dataStartRow, topLeftCell: `A${dataStartRow + 1}`, state: 'frozen' };
+                }
+                
+                // Adicionar fórmulas de soma (se ativado)
+                if (config.excelFormulas) {
+                    const colunasNumero = headers
+                        .map((h, idx) => ({ nome: h, idx }))
+                        .filter(({ nome }) => nome.includes('Peso'));
+                    
+                    if (colunasNumero.length > 0) {
+                        const totalRow = lastDataRow + 1;
+                        
+                        // Label "TOTAL"
+                        XLSX.utils.sheet_add_aoa(ws, [['TOTAL']], { origin: `A${totalRow}` });
+                        
+                        colunasNumero.forEach(({ idx }) => {
+                            const colLetter = String.fromCharCode(65 + idx);
+                            const sumCell = `${colLetter}${totalRow}`;
+                            ws[sumCell] = { 
+                                t: 'n', 
+                                f: `SUM(${colLetter}${dataStartRow + 1}:${colLetter}${lastDataRow})` 
+                            };
+                        });
+                    }
+                }
+                
+                // Mesclar células do cabeçalho
+                if (!ws['!merges']) ws['!merges'] = [];
+                const mergeCols = Math.min(6, numCols);
+                ws['!merges'].push({ s: { r: 0, c: 0 }, e: { r: 0, c: mergeCols - 1 } }); // Título
+                ws['!merges'].push({ s: { r: 1, c: 0 }, e: { r: 1, c: mergeCols - 1 } }); // Nome empresa
+                ws['!merges'].push({ s: { r: 2, c: 0 }, e: { r: 2, c: mergeCols - 1 } }); // Período
+                ws['!merges'].push({ s: { r: 3, c: 0 }, e: { r: 3, c: mergeCols - 1 } }); // Data geração
+
+                // Estilizar cabeçalho superior (título, empresa, período, data)
+                if (ws['A1']) ws['A1'].s = this._estiloTituloFaixa(18);
+                if (ws['A2']) ws['A2'].s = {
+                    font: { name: 'Calibri', sz: 14, bold: true, color: { rgb: '1F4788' } },
+                    fill: { patternType: 'solid', fgColor: { rgb: 'D9E1F2' } },
+                    alignment: { vertical: 'center', horizontal: 'center' }
+                };
+                if (ws['A3']) ws['A3'].s = this._estiloInfo();
+                if (ws['A4']) ws['A4'].s = this._estiloInfo();
+                const refTituloPersonalizado = `A${currentRow}`;
+                if (ws[refTituloPersonalizado]) ws[refTituloPersonalizado].s = this._estiloTituloFaixa(14);
+
+                // Estilizar o cabeçalho da tabela de dados (linha dataStartRow em 1-indexado = dataStartRow-1 em 0-indexado)
+                const headerRowIdx = dataStartRow - 1;
+                for (let c = 0; c < numCols; c++) {
+                    const ref = XLSX.utils.encode_cell({ r: headerRowIdx, c });
+                    if (!ws[ref]) continue;
+                    ws[ref].s = {
+                        font:      { name: 'Calibri', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
+                        fill:      { patternType: 'solid', fgColor: { rgb: '0D9488' } },
+                        alignment: { vertical: 'center', horizontal: 'center', wrapText: true },
+                        border: {
+                            top:    { style: 'medium', color: { rgb: '000000' } },
+                            bottom: { style: 'medium', color: { rgb: '000000' } },
+                            left:   { style: 'thin', color: { rgb: 'FFFFFF' } },
+                            right:  { style: 'thin', color: { rgb: 'FFFFFF' } }
+                        }
+                    };
+                }
+
+                // Zebra + bordas nas linhas de dados (preservando destaques já aplicados em config.excelFormatting)
+                const borderColor = this._excelTheme.borderColor;
+                const thinBorder = {
+                    top:    { style: 'thin', color: { rgb: borderColor } },
+                    bottom: { style: 'thin', color: { rgb: borderColor } },
+                    left:   { style: 'thin', color: { rgb: borderColor } },
+                    right:  { style: 'thin', color: { rgb: borderColor } }
+                };
+                for (let r = dataStartRow; r <= lastDataRow; r++) {
+                    const zebraFill = (r - dataStartRow) % 2 === 1
+                        ? { patternType: 'solid', fgColor: { rgb: this._excelTheme.zebraDark } }
+                        : { patternType: 'solid', fgColor: { rgb: this._excelTheme.zebraLight } };
+                    for (let c = 0; c < numCols; c++) {
+                        const ref = XLSX.utils.encode_cell({ r, c });
+                        if (!ws[ref]) continue;
+                        const eNum = ws[ref].t === 'n' || typeof ws[ref].v === 'number';
+                        // Se já existe estilo (formatação condicional de peso), preservar cor de fundo
+                        const estiloExistente = ws[ref].s || {};
+                        ws[ref].s = {
+                            font:      estiloExistente.font || { name: 'Calibri', sz: 10 },
+                            fill:      estiloExistente.fill || zebraFill,
+                            alignment: { vertical: 'center', horizontal: eNum ? 'right' : 'left' },
+                            border:    thinBorder,
+                            ...(eNum ? { numFmt: '#,##0' } : {})
+                        };
+                    }
+                }
+
+                // Estilo da linha TOTAL (se houver)
+                if (config.excelFormulas) {
+                    const totalR = lastDataRow; // 0-indexado; lastDataRow+1 é a linha na planilha, então r = lastDataRow
+                    const totalRowIdx = lastDataRow; // 0-indexed row of total
+                    for (let c = 0; c < numCols; c++) {
+                        const ref = XLSX.utils.encode_cell({ r: totalRowIdx, c });
+                        if (!ws[ref]) continue;
+                        const eNum = ws[ref].t === 'n' || typeof ws[ref].v === 'number';
+                        ws[ref].s = {
+                            font:      { name: 'Calibri', sz: 11, bold: true, color: { rgb: 'FFFFFF' } },
+                            fill:      { patternType: 'solid', fgColor: { rgb: '1F4788' } },
+                            alignment: { vertical: 'center', horizontal: eNum ? 'right' : 'center' },
+                            border: {
+                                top:    { style: 'medium', color: { rgb: '000000' } },
+                                bottom: { style: 'medium', color: { rgb: '000000' } }
+                            },
+                            ...(eNum ? { numFmt: '#,##0' } : {})
+                        };
+                    }
+                }
+                
+                // Aplicar formatação condicional (cores por peso) - se ativado
+                if (config.excelFormatting) {
+                    const pesoColIndex = headers.findIndex(h => h.includes('Peso Líquido'));
+                    
+                    if (pesoColIndex !== -1) {
+                        for (let R = dataStartRow; R <= lastDataRow; ++R) {
+                            const cellAddress = XLSX.utils.encode_cell({ r: R, c: pesoColIndex });
+                            const cell = ws[cellAddress];
+                            
+                            if (cell && typeof cell.v === 'number') {
+                                const peso = cell.v;
+                                if (!cell.s) cell.s = {};
+                                
+                                if (peso > 20000) {
+                                    cell.s = { fill: { fgColor: { rgb: "C6EFCE" } }, font: { color: { rgb: "006100" } } };
+                                } else if (peso < 5000) {
+                                    cell.s = { fill: { fgColor: { rgb: "FFC7CE" } }, font: { color: { rgb: "9C0006" } } };
+                                } else {
+                                    cell.s = { fill: { fgColor: { rgb: "FFEB9C" } }, font: { color: { rgb: "9C6500" } } };
+                                }
+                            }
+>>>>>>> 85d7f01ba704e3f7dc8ef8eaf26ae78dd379cab7
                         }
                     }
                 }
